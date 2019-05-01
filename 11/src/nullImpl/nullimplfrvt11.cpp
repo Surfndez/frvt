@@ -40,7 +40,7 @@ NullImplFRVT11::createTemplate(
     for(const Image &image: faces) {
 
         // Detect face
-        std::vector<Rect> rects = face_detector->Detect(image.data, image.width, image.height);
+        std::vector<Rect> rects = face_detector->Detect(image.data, image.width, image.height, image.depth);
     }
 
     /* Note: example code, potentially not portable across machines. */
