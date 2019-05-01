@@ -8,8 +8,12 @@ set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 
 find_package (Torch REQUIRED)
 
+file(GLOB algo_src
+    "../algo/*.h"
+    "../algo/*.cpp"
+)
+
 # Build the shared libraries
-add_library (frvt_11_null_001 SHARED nullimplfrvt11.cpp)
+add_library (frvt_11_null_001 SHARED ${algo_src} nullimplfrvt11.cpp)
 
 target_link_libraries (frvt_11_null_001 "${TORCH_LIBRARIES}")
-

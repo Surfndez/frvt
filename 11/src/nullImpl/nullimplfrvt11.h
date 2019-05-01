@@ -12,14 +12,7 @@
 #define NULLIMPLFRVT11_H_
 
 #include "frvt11.h"
-
-namespace torch {
-    namespace jit {
-        namespace script {
-            class Module;
-        }
-    }
-}
+#include "../algo/FaceDetector.h"
 
 /*
  * Declare the implementation class of the FRVT 1:1 Interface
@@ -53,8 +46,8 @@ public:
 private:
     std::string configDir;
     static const int featureVectorSize{4};
-    
-    std::shared_ptr<torch::jit::script::Module> face_detector;
+        
+    std::shared_ptr<FaceDetector> face_detector;
 };
 }
 

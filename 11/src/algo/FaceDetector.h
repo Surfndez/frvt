@@ -6,7 +6,9 @@
 namespace FRVT_11 {
     class FaceDetector {
 public:
-    std::vector<Rect> Detect() const;
+    virtual ~FaceDetector() {}
+
+    virtual std::vector<Rect> Detect() const = 0;
 };
 }
 
