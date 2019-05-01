@@ -11,6 +11,8 @@
 #include <cstring>
 #include <cstdlib>
 
+#include <torch/script.h>
+
 #include "nullimplfrvt11.h"
 
 using namespace std;
@@ -24,6 +26,13 @@ NullImplFRVT11::~NullImplFRVT11() {}
 ReturnStatus
 NullImplFRVT11::initialize(const std::string &configDir)
 {
+    std:string face_detector_model_path = configDir + "/sfd.pt";
+    std::cout << "  " << face_detector_model_path << std::endl;
+
+    // Deserialize the ScriptModule from a file using torch::jit::load().
+    std::shared_ptr<torch::jit::script::Module> module = torch::jit::load(face_detector_model_path);
+    assert(module != nullptr);
+
     return ReturnStatus(ReturnCode::Success);
 }
 
