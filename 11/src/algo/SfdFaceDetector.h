@@ -21,7 +21,7 @@ public:
     SfdFaceDetector(const std::string &configDir);
     ~SfdFaceDetector() override;
 
-    virtual std::vector<Rect> Detect() const override;
+    virtual std::vector<Rect> Detect(std::shared_ptr<uint8_t> data, int width, int depth) const override;
 
 private:
     std::shared_ptr<torch::jit::script::Module> face_detector;

@@ -37,20 +37,11 @@ NullImplFRVT11::createTemplate(
         std::vector<uint8_t> &templ,
         std::vector<EyePair> &eyeCoordinates)
 {
-    /* START FACE DETECTION */
+    for(const Image &image: faces) {
 
-    face_detector->Detect();
-
-    /* END FACE DETECTION */
-
-    /* START LANDMARKS DETECTION */
-    /* END LANDMARKS DETECTION */
-
-    /* START IMAGE NORMALIZATION */
-    /* END IMAGE NORMALIZATION */
-
-    /* START TEMPLACE EXTRACTION */
-    /* END TEMPLACE EXTRACTION */
+        // Detect face
+        std::vector<Rect> rects = face_detector->Detect(image.data, image.width, image.height);
+    }
 
     /* Note: example code, potentially not portable across machines. */
     std::vector<float> fv = {1.0, 2.0, 8.88, 765.88989};

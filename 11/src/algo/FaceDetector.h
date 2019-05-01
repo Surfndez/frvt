@@ -8,7 +8,7 @@ namespace FRVT_11 {
 public:
     virtual ~FaceDetector() {}
 
-    virtual std::vector<Rect> Detect() const = 0;
+    virtual std::vector<Rect> Detect(std::shared_ptr<uint8_t> data, int width, int depth) const = 0;
 };
 }
 

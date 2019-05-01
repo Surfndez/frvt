@@ -16,7 +16,7 @@ SfdFaceDetector::SfdFaceDetector(const std::string &configDir)
 SfdFaceDetector::~SfdFaceDetector() {}
 
 std::vector<Rect>
-SfdFaceDetector::Detect() const
+SfdFaceDetector::Detect(std::shared_ptr<uint8_t> data, int width, int depth) const
 {
     // Create a vector of inputs.
     std::vector<torch::jit::IValue> inputs;
