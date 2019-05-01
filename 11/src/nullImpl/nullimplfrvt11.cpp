@@ -31,7 +31,7 @@ NullImplFRVT11::initialize(const std::string &configDir)
 
     // Deserialize the ScriptModule from a file using torch::jit::load().
     face_detector = torch::jit::load(face_detector_model_path);
-    assert(module != nullptr);
+    assert(face_detector != nullptr);
 
     return ReturnStatus(ReturnCode::Success);
 }
@@ -53,6 +53,29 @@ NullImplFRVT11::createTemplate(
     for (unsigned int i=0; i<faces.size(); i++) {
         eyeCoordinates.push_back(EyePair(true, true, i, i, i+1, i+1));
     }
+
+    /* START MY CODE */
+
+    // Create a vector of inputs.
+    std::vector<torch::jit::IValue> inputs;
+    inputs.push_back(torch::ones({1, 3, 224, 224}));
+
+    // Execute the model and turn its output into a tensor.
+    torch::jit::IValue output = face_detector->forward(inputs);
+
+    // Prob the output
+    std::cout << " Try to print some data... " << std::endl;
+    std::cout << "isTensor: " << output.isTensor() << '\n';
+    std::cout << "isBlob: " << output.isBlob() << '\n';
+    std::cout << "isTuple: " << output.isTuple() << '\n';  // this returns true
+
+    c10::intrusive_ptr<c10::ivalue::Tuple> outputTuple = output.toTuple();
+
+    auto outputTupleElements = outputTuple->elements();
+
+    std::cout << "Size of outputTupleElements: " << outputTupleElements.size() << std::endl;
+
+    /* END MY CODE */
 
     return ReturnStatus(ReturnCode::Success);
 }
