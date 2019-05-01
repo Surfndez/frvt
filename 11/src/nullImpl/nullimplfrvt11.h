@@ -13,6 +13,14 @@
 
 #include "frvt11.h"
 
+namespace torch {
+    namespace jit {
+        namespace script {
+            class Module;
+        }
+    }
+}
+
 /*
  * Declare the implementation class of the FRVT 1:1 Interface
  */
@@ -45,7 +53,8 @@ public:
 private:
     std::string configDir;
     static const int featureVectorSize{4};
-    // Some other members
+    
+    std::shared_ptr<torch::jit::script::Module> face_detector;
 };
 }
 
