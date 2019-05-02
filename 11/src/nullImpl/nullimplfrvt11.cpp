@@ -38,9 +38,11 @@ NullImplFRVT11::createTemplate(
         std::vector<EyePair> &eyeCoordinates)
 {
     for(const Image &image: faces) {
+        
+        int channels = int(image.depth / 8);
 
         // Detect face
-        std::vector<Rect> rects = face_detector->Detect(image.data, image.width, image.height, image.depth);
+        std::vector<Rect> rects = face_detector->Detect(image.data, image.width, image.height, channels);
     }
 
     /* Note: example code, potentially not portable across machines. */
