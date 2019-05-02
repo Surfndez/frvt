@@ -5,6 +5,20 @@
 
 using namespace FRVT_11;
 
+Rect
+Decode(const torch::Tensor &priors, const torch::Tensor &variances, const torch::Tensor &loc, float score)
+{
+    auto box = at::cat({priors.slice(1, 0, 2) + loc.slice(1, 0, 2) * variances[0] * priors.slice(1, 2, priors.sizes()[1]), \
+                        priors.slice(1, 2, priors.sizes()[1]) * at::exp(loc.slice(1, 2, priors.sizes()[1]) * variances[1])}, 1);
+    box = box[0];
+    Rect rect(  int(*(box[0] - box[2] / 2).data<float>()),\
+                int(*(box[1] - box[3] / 2).data<float>()),\
+                int(*(box[2] + box[0]).data<float>()),\
+                int(*(box[3] + box[1]).data<float>()),\
+                score);
+    return rect;
+}
+
 SfdFaceDetector::SfdFaceDetector(const std::string &configDir)
 {
     std::string face_detector_model_path = configDir + "/sfd.pt";
@@ -69,8 +83,6 @@ SfdFaceDetector::Detect(std::shared_ptr<uint8_t> data, int width, int height, in
         auto oreg = tensors[i * 2 + 1][0];
         auto stride = std::pow(2, i + 2);
 
-        // std::cout << ocls << std::endl;
-
         auto oclsSizes = ocls.sizes();
         for (int hindex = 0; hindex < oclsSizes[0]; ++hindex) {
             for (int windex = 0; windex < oclsSizes[1]; ++windex) {
@@ -81,18 +93,7 @@ SfdFaceDetector::Detect(std::shared_ptr<uint8_t> data, int width, int height, in
                     auto loc = oreg.slice(/*dim=*/1, /*start=*/hindex, /*end=*/hindex + 1).slice(/*dim=*/2, /*start=*/windex, /*end=*/windex + 1).view({1, 4});
                     auto priors = torch::tensor({axc / 1.0, ayc / 1.0, stride * 4 / 1.0, stride * 4 / 1.0}, torch::requires_grad(false).dtype(torch::kFloat32)).view({1, 4});
                     auto variances = torch::tensor({0.1, 0.2}, torch::requires_grad(false).dtype(torch::kFloat32));
-
-                    // decode
-                    auto box = at::cat({priors.slice(1, 0, 2) + loc.slice(1, 0, 2) * variances[0] * priors.slice(1, 2, priors.sizes()[1]), \
-                                        priors.slice(1, 2, priors.sizes()[1]) * at::exp(loc.slice(1, 2, priors.sizes()[1]) * variances[1])}, 1);
-                    box = box[0];
-
-                    Rect rect(  int(*(box[0] - box[2] / 2).data<float>()),\
-                                int(*(box[1] - box[3] / 2).data<float>()),\
-                                int(*(box[2] + box[0]).data<float>()),\
-                                int(*(box[3] + box[1]).data<float>()),\
-                                score);
-
+                    Rect rect = Decode(priors, variances, loc, score);
                     rects.push_back(rect);
                 }
             }
