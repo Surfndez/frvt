@@ -1,9 +1,34 @@
 #include <cmath>
+#include <algorithm>
 #include <torch/script.h>
 
 #include "SfdFaceDetector.h"
 
 using namespace FRVT_11;
+
+float
+IOU(const Rect &box_a, const Rect &box_b)
+{
+    // determine the (x, y)-coordinates of the intersection rectangle
+    float x_a = std::max(box_a.x1, box_b.x1);
+    float y_a = std::max(box_a.y1, box_b.y1);
+    float x_b = std::min(box_a.x2, box_b.x2);
+    float y_b = std::min(box_a.y2, box_b.y2);
+
+    // compute the area of intersection rectangle
+    float inter_area = std::max(0.f, x_b - x_a + 1.f) * std::max(0.f, y_b - y_a + 1.f);
+
+    // compute the area of both the prediction and ground-truth rectangles
+    float box_a_area = (box_a.x2 - box_a.x1 + 1) * (box_a.y2 - box_a.y1 + 1);
+    float box_b_area = (box_b.x2 - box_b.x1 + 1) * (box_b.y2 - box_b.y1 + 1);
+
+    // compute the intersection over union by taking the intersection
+    // area and dividing it by the sum of prediction + ground-truth
+    // areas - the interesection area
+    float iou = inter_area / float(box_a_area + box_b_area - inter_area);
+
+    return iou;
+}
 
 Rect
 Decode(const torch::Tensor &priors, const torch::Tensor &variances, const torch::Tensor &loc, float score)
@@ -17,6 +42,37 @@ Decode(const torch::Tensor &priors, const torch::Tensor &variances, const torch:
                 int(*(box[3] + box[1]).data<float>()),\
                 score);
     return rect;
+}
+
+std::vector<Rect>
+NonMaxSuppression(std::vector<Rect> &all, float threshold=0.3)
+{
+    if (all.size() == 0) {
+        return all;
+    }
+
+    std::vector<Rect> rects;
+
+    std::sort(std::begin(all), std::end(all), [](const Rect &a, const Rect &b) { return a.score > b.score; });
+
+    while (all.size() > 0) {
+        rects.push_back(all[0]);
+        all.erase(all.begin());
+        auto iter = all.begin();
+        while (iter != all.end()) {
+            for (const Rect& a : rects) {
+                auto iou = IOU(a, *iter);
+                if (iou > threshold) {
+                    iter = all.erase(iter);
+                }
+                else {
+                    ++iter;
+                }
+            }
+        }
+    }
+
+    return rects;
 }
 
 SfdFaceDetector::SfdFaceDetector(const std::string &configDir)
@@ -53,9 +109,6 @@ SfdFaceDetector::Detect(std::shared_ptr<uint8_t> data, int width, int height, in
     at::Tensor tensor_image = torch::from_blob(image.data(), at::IntList(sizes), options);
     tensor_image = tensor_image.toType(at::kFloat);
 
-    // Resize image for faster inference
-    tensor_image = tensor_image.resize_({1, 3, int(height * 0.5), int(width * 0.5)}); // TODO: !!! This probably shouldn't stay here. Detection won't be so good...
-
     // Execute the model and turn its output into a tensor.
     torch::jit::IValue output = face_detector->forward({tensor_image});
 
@@ -89,7 +142,7 @@ SfdFaceDetector::Detect(std::shared_ptr<uint8_t> data, int width, int height, in
                 auto axc = stride / 2 + windex * stride;
                 auto ayc = stride / 2 + hindex * stride;
                 auto score = *(ocls[hindex][windex].data<float>());
-                if (score > 0.05) {
+                if (score > 0.5) {
                     auto loc = oreg.slice(/*dim=*/1, /*start=*/hindex, /*end=*/hindex + 1).slice(/*dim=*/2, /*start=*/windex, /*end=*/windex + 1).view({1, 4});
                     auto priors = torch::tensor({axc / 1.0, ayc / 1.0, stride * 4 / 1.0, stride * 4 / 1.0}, torch::requires_grad(false).dtype(torch::kFloat32)).view({1, 4});
                     auto variances = torch::tensor({0.1, 0.2}, torch::requires_grad(false).dtype(torch::kFloat32));
@@ -99,6 +152,8 @@ SfdFaceDetector::Detect(std::shared_ptr<uint8_t> data, int width, int height, in
             }
         }
     }
+
+    rects = NonMaxSuppression(rects);
 
     for (const auto& r: rects) {
         std::cout << "Found: " << "[" << r.x1 << "," << r.y1 << "," << r.x2 << "," << r.y2 << "]" << std::endl;
