@@ -36,10 +36,14 @@ Decode(const torch::Tensor &priors, const torch::Tensor &variances, const torch:
     auto box = at::cat({priors.slice(1, 0, 2) + loc.slice(1, 0, 2) * variances[0] * priors.slice(1, 2, priors.sizes()[1]), \
                         priors.slice(1, 2, priors.sizes()[1]) * at::exp(loc.slice(1, 2, priors.sizes()[1]) * variances[1])}, 1);
     box = box[0];
-    Rect rect(  int(*(box[0] - box[2] / 2).data<float>()),\
-                int(*(box[1] - box[3] / 2).data<float>()),\
-                int(*(box[2] + box[0]).data<float>()),\
-                int(*(box[3] + box[1]).data<float>()),\
+    box[0] = box[0] - box[2] / 2;
+    box[1] = box[1] - box[3] / 2;
+    box[2] = box[2] + box[0];
+    box[3] = box[3] + box[1];
+    Rect rect(  int(*box[0].data<float>()),\
+                int(*box[1].data<float>()),\
+                int(*box[2].data<float>()),\
+                int(*box[3].data<float>()),\
                 score);
     return rect;
 }
