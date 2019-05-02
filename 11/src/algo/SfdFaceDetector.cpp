@@ -89,25 +89,19 @@ SfdFaceDetector::~SfdFaceDetector() {}
 std::vector<Rect>
 SfdFaceDetector::Detect(std::shared_ptr<uint8_t> data, int width, int height, int channels) const
 {
-    std::cout << "Detect: (" << height << "," << width << "," << channels << ")" << std::endl;
-
-    std::vector<uint8_t> image;
-
-    // Normalize pixels
-    for (int r = 0; r < height; ++r) {
-        for (int c = 0; c < width; ++c) {
-            int base_index = r * c * channels;
-            image.push_back(data.get()[base_index + 0] - 104);
-            image.push_back(data.get()[base_index + 1] - 117);
-            image.push_back(data.get()[base_index + 2] - 123);
-        }
-    }
+    std::cout << std::endl << "Detect: (" << height << "," << width << "," << channels << ")" << std::endl;
 
     // Image data to tensor
-    std::vector<int64_t> sizes = {1, channels, height, width};
+    std::vector<int64_t> sizes = {1, height, width, channels};
     at::TensorOptions options(at::ScalarType::Byte);
-    at::Tensor tensor_image = torch::from_blob(image.data(), at::IntList(sizes), options);
+    at::Tensor tensor_image = torch::from_blob(data.get(), at::IntList(sizes), options);
     tensor_image = tensor_image.toType(at::kFloat);
+
+    // Normalize pixels
+    tensor_image = tensor_image - torch::tensor({104, 117, 123}, torch::requires_grad(false).dtype(torch::kFloat32));
+
+    // HWC -> CHW
+    tensor_image = tensor_image.permute({0, 3, 1, 2});
 
     // Execute the model and turn its output into a tensor.
     torch::jit::IValue output = face_detector->forward({tensor_image});
