@@ -91,14 +91,14 @@ SfdFaceDetector::SfdFaceDetector(const std::string &configDir)
 SfdFaceDetector::~SfdFaceDetector() {}
 
 std::vector<Rect>
-SfdFaceDetector::Detect(std::shared_ptr<uint8_t> data, int width, int height, int channels) const
+SfdFaceDetector::Detect(const ImageData &image) const
 {
-    std::cout << std::endl << "Detect: (" << height << "," << width << "," << channels << ")" << std::endl;
+    std::cout << std::endl << "Detect: (" << image.height << "," << image.width << "," << image.channels << ")" << std::endl;
 
     // Image data to tensor
-    std::vector<int64_t> sizes = {1, height, width, channels};
+    std::vector<int64_t> sizes = {1, image.height, image.width, image.channels};
     at::TensorOptions options(at::ScalarType::Byte);
-    at::Tensor tensor_image = torch::from_blob(data.get(), at::IntList(sizes), options);
+    at::Tensor tensor_image = torch::from_blob(image.data.get(), at::IntList(sizes), options);
     tensor_image = tensor_image.toType(at::kFloat);
 
     // Normalize pixels
