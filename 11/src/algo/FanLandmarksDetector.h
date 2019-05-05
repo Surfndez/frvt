@@ -24,7 +24,7 @@ public:
     virtual std::vector<int> Detect(const ImageData& imageData, const Rect &face) const override;
 
 private:
-    std::shared_ptr<torch::jit::script::Module> landmarks_detector;
+    std::shared_ptr<torch::jit::script::Module> mLandmarksDetector;
 };
 }
 

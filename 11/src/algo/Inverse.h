@@ -5,6 +5,6 @@ namespace at {
     class Tensor;
 }
 
-at::Tensor InverseMatrix(const at::Tensor &t);
+at::Tensor InverseMatrix(const at::Tensor &matTensor);
 
 #endif /* INVERSE_H_ */
