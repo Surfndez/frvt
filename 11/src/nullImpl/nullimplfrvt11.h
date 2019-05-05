@@ -13,6 +13,7 @@
 
 #include "frvt11.h"
 #include "../algo/FaceDetector.h"
+#include "../algo/LandmarksDetector.h"
 
 /*
  * Declare the implementation class of the FRVT 1:1 Interface
@@ -47,7 +48,8 @@ private:
     std::string configDir;
     static const int featureVectorSize{4};
         
-    std::shared_ptr<FaceDetector> face_detector;
+    std::shared_ptr<FaceDetector> mFaceDetector;
+    std::shared_ptr<LandmarksDetector> mLandmarksDetector;
 };
 }
 

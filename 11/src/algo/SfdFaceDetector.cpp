@@ -81,11 +81,11 @@ NonMaxSuppression(std::vector<Rect> &all, float threshold=0.3)
 
 SfdFaceDetector::SfdFaceDetector(const std::string &configDir)
 {
-    std::string face_detector_model_path = configDir + "/sfd.pt";
+    std::string faceDetectorModelPath = configDir + "/sfd.pt";
 
     // Deserialize the ScriptModule from a file using torch::jit::load().
-    face_detector = torch::jit::load(face_detector_model_path);
-    assert(face_detector != nullptr);
+    mFaceDetector = torch::jit::load(faceDetectorModelPath);
+    assert(mFaceDetector != nullptr);
 }
 
 SfdFaceDetector::~SfdFaceDetector() {}
@@ -98,17 +98,17 @@ SfdFaceDetector::Detect(const ImageData &image) const
     // Image data to tensor
     std::vector<int64_t> sizes = {1, image.height, image.width, image.channels};
     at::TensorOptions options(at::ScalarType::Byte);
-    at::Tensor tensor_image = torch::from_blob(image.data.get(), at::IntList(sizes), options);
-    tensor_image = tensor_image.toType(at::kFloat);
+    at::Tensor tensorImage = torch::from_blob(image.data.get(), at::IntList(sizes), options);
+    tensorImage = tensorImage.toType(at::kFloat);
 
     // Normalize pixels
-    tensor_image = tensor_image - torch::tensor({104, 117, 123}, torch::requires_grad(false).dtype(torch::kFloat32));
+    tensorImage = tensorImage - torch::tensor({104, 117, 123}, torch::requires_grad(false).dtype(torch::kFloat32));
 
     // HWC -> CHW
-    tensor_image = tensor_image.permute({0, 3, 1, 2});
+    tensorImage = tensorImage.permute({0, 3, 1, 2});
 
     // Execute the model and turn its output into a tensor.
-    torch::jit::IValue output = face_detector->forward({tensor_image});
+    torch::jit::IValue output = mFaceDetector->forward({tensorImage});
 
     // Convert output to Tensors    
     c10::intrusive_ptr<c10::ivalue::Tuple> outputTuple = output.toTuple();

@@ -13,6 +13,7 @@
 
 #include "nullimplfrvt11.h"
 #include "../algo/SfdFaceDetector.h"
+#include "../algo/FanLandmarksDetector.h"
 
 using namespace std;
 using namespace FRVT;
@@ -25,7 +26,8 @@ NullImplFRVT11::~NullImplFRVT11() {}
 ReturnStatus
 NullImplFRVT11::initialize(const std::string &configDir)
 {
-    face_detector = std::make_shared<SfdFaceDetector>(configDir);
+    mFaceDetector = std::make_shared<SfdFaceDetector>(configDir);
+    mLandmarksDetector = std::make_shared<FanLandmarksDetector>(configDir);
 
     return ReturnStatus(ReturnCode::Success);
 }
@@ -37,12 +39,15 @@ NullImplFRVT11::createTemplate(
         std::vector<uint8_t> &templ,
         std::vector<EyePair> &eyeCoordinates)
 {
-    for(const Image &image: faces) {
-        
+    for(const Image &image: faces) {        
         int channels = int(image.depth / 8);
+        ImageData imageData(image.data, image.width, image.height, channels);
 
-        // Detect face
-        std::vector<Rect> rects = face_detector->Detect(image.data, image.width, image.height, channels);
+        std::vector<Rect> rects = mFaceDetector->Detect(imageData);
+
+        for (const Rect &rect : rects) {
+            std::vector<int> landmarks = mLandmarksDetector->Detect(imageData, rect);
+        }
     }
 
     /* Note: example code, potentially not portable across machines. */
@@ -82,8 +87,3 @@ Interface::getImplementation()
 {
     return std::make_shared<NullImplFRVT11>();
 }
-
-
-
-
-

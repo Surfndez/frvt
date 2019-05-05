@@ -24,7 +24,7 @@ public:
     virtual std::vector<Rect> Detect(const ImageData &image) const override;
 
 private:
-    std::shared_ptr<torch::jit::script::Module> face_detector;
+    std::shared_ptr<torch::jit::script::Module> mFaceDetector;
 };
 }
 
