@@ -2,6 +2,7 @@
 
 #include <torch/script.h>
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "FanLandmarksDetector.h"
 
@@ -12,8 +13,6 @@ int REFERENCE_SCALE = 195;
 std::vector<int>
 Transform(std::vector<float> point, float* center, float scale, float resolution, bool invert=false)
 {
-    std::cout << "Transform 0" << std::endl;
-
     cv::Mat _pt = cv::Mat::ones(3, 1, CV_32FC1);
     _pt.at<float>(0, 0) = point[0];
     _pt.at<float>(1, 0) = point[1];
@@ -36,18 +35,12 @@ Transform(std::vector<float> point, float* center, float scale, float resolution
 cv::Mat
 CropImage(const cv::Mat &image, float* center, float scale , float resolution=256.0f)
 {
-    std::cout << "CropImage 0" << std::endl;
-
     // Crop around the center point
     /* Crops the image around the center. Input is expected to be an np.ndarray */
     auto ul = Transform({1, 1}, center, scale, resolution, true);
     auto br = Transform({resolution, resolution}, center, scale, resolution, true);
 
-    std::cout << "CropImage 1" << std::endl;
-
     cv::Mat newImg = cv::Mat::zeros(br[1] - ul[1], br[0] - ul[0], CV_8UC3);
-
-    std::cout << "CropImage 2" << std::endl;
 
     auto ht = image.rows;
     auto wd = image.cols;
@@ -58,10 +51,10 @@ CropImage(const cv::Mat &image, float* center, float scale , float resolution=25
     std::vector<int> oldX = {std::max(1, ul[0]) + 1, std::min(br[0], wd)};
     std::vector<int> oldY = {std::max(1, ul[1]) + 1, std::min(br[1], ht)};
 
-    std::cout << "CropImage 3 " << oldX[0] << "," << oldY[0] << "," << oldX[1] << "," << oldY[1] << std::endl;
     cv::Mat oldImg = image(cv::Range(oldY[0] - 1, oldY[1]), cv::Range(oldX[0] - 1, oldX[1]));
-    std::cout << "CropImage 4 " << newX[0] << "," << newY[0] << "," << newX[1] << "," << newY[1] << std::endl;
     oldImg.copyTo(newImg(cv::Rect(newX[0] - 1, newY[0] - 1, newX[1] - newX[0] + 1, newY[1] - newY[0] + 1)));
+
+    cv::resize(newImg, newImg, cv::Size(resolution, resolution), 0, 0, cv::INTER_LINEAR);
 
     return newImg;
 }
