@@ -6,9 +6,12 @@
 
 #include "FanLandmarksDetector.h"
 
+//for debug
+#include <opencv2/highgui.hpp>
+
 using namespace FRVT_11;
 
-int REFERENCE_SCALE = 195;
+int REFERENCE_SCALE = 195.0f;
 
 std::vector<int>
 Transform(std::vector<float> point, float* center, float scale, float resolution, bool invert=false)
@@ -33,17 +36,21 @@ Transform(std::vector<float> point, float* center, float scale, float resolution
 }
 
 cv::Mat
-CropImage(const cv::Mat &image, float* center, float scale, float resolution=256.0f)
+CropImage(cv::Mat &image, float* center, float scale, float resolution=256.0f)
 {
     // Crop around the center point
     /* Crops the image around the center. Input is expected to be an np.ndarray */
     auto ul = Transform({1, 1}, center, scale, resolution, true);
     auto br = Transform({resolution, resolution}, center, scale, resolution, true);
 
-    cv::Mat newImg = cv::Mat::zeros(br[1] - ul[1], br[0] - ul[0], CV_8UC3);
+    std::cout << "ul = " << ul[0] << "," << ul[1] << std::endl;
+    std::cout << "br = " << br[0] << "," << br[1] << std::endl;
+    std::cout << "new dim = " << br[1] - ul[1] << "," << br[0] - ul[0] <<std::endl;
 
     auto ht = image.rows;
     auto wd = image.cols;
+
+    std::cout << "old dim = " << ht << "," << wd << std::endl;
 
     std::vector<int> newX = {std::max(1, -ul[0] + 1), std::min(br[0], wd) - ul[0]};
     std::vector<int> newY = {std::max(1, -ul[1] + 1), std::min(br[1], ht) - ul[1]};
@@ -51,12 +58,60 @@ CropImage(const cv::Mat &image, float* center, float scale, float resolution=256
     std::vector<int> oldX = {std::max(1, ul[0]) + 1, std::min(br[0], wd)};
     std::vector<int> oldY = {std::max(1, ul[1]) + 1, std::min(br[1], ht)};
 
-    cv::Mat oldImg = image(cv::Range(oldY[0] - 1, oldY[1]), cv::Range(oldX[0] - 1, oldX[1]));
-    oldImg.copyTo(newImg(cv::Rect(newX[0] - 1, newY[0] - 1, newX[1] - newX[0] + 1, newY[1] - newY[0] + 1)));
+    std::cout << "newX = " << newX[0] << " " << newX[1] << std::endl;
+    std::cout << "newY = " << newY[0] << " " << newY[1] << std::endl;
+    std::cout << "oldX = " << oldX[0] << " " << oldX[1] << std::endl;
+    std::cout << "oldY = " << oldY[0] << " " << oldY[1] << std::endl;
+
+    cv::Mat cropFromOrig = image(cv::Range(oldY[0] - 1, oldY[1]), cv::Range(oldX[0] - 1, oldX[1]));
+    cv::Mat newImg = cv::Mat::zeros(br[1] - ul[1], br[0] - ul[0], CV_8UC3);
+    cv::Rect roiInNew(newX[0] - 1, newY[0] - 1, cropFromOrig.cols, cropFromOrig.rows);
+    cropFromOrig.copyTo(newImg(roiInNew));
+
+    std::cout << "cropFromOrig " << cropFromOrig.rows << "," << cropFromOrig.cols << ". roiInNew " << roiInNew.height << "," << roiInNew.width << std::endl;
+
+    //cv::rectangle(newImg, roiInNew, cv::Scalar(0, 255, 0), 1, 8, 0);
+
+    cv::imwrite( "/home/administrator/nist/frvt/debug/cropFromOrig.png", cropFromOrig);
+    cv::imwrite( "/home/administrator/nist/frvt/debug/newImg.png", newImg);
+
+    std::cout << "cropped." << std::endl;
 
     cv::resize(newImg, newImg, cv::Size(resolution, resolution), 0, 0, cv::INTER_LINEAR);
 
+    std::cout << "resized" << std::endl;
+
     return newImg;
+}
+
+std::vector<int>
+Convert68To5(const at::Tensor &predsOrig)
+{
+    std::vector<int> landmarks;
+
+    // left eye
+    auto leftEye = predsOrig.slice(0, 36, 42).sum(0) / 6;
+    landmarks.push_back(leftEye[0].item<int>());
+    landmarks.push_back(leftEye[1].item<int>());
+
+    // right eye
+    auto rightEye = predsOrig.slice(0, 42, 48).sum(0) / 6;
+    landmarks.push_back(rightEye[0].item<int>());
+    landmarks.push_back(rightEye[1].item<int>());
+
+    // nose
+    landmarks.push_back(predsOrig[30][0].item<int>());
+    landmarks.push_back(predsOrig[30][1].item<int>());
+
+    // left mouth
+    landmarks.push_back(predsOrig[48][0].item<int>());
+    landmarks.push_back(predsOrig[48][1].item<int>());
+
+    // right mouth
+    landmarks.push_back(predsOrig[54][0].item<int>());
+    landmarks.push_back(predsOrig[54][1].item<int>());
+
+    return landmarks;
 }
 
 std::vector<int>
@@ -67,6 +122,10 @@ DecodeOutput(at::Tensor &outputTensor, float* center, float scale)
     auto idx = std::get<1>(res);
     idx = idx + 1;
 
+    std::cout << "idx.sizes() = " << idx.sizes() << std::endl;
+    std::cout << "idx[0][0] = " << idx[0][0].item<int>() << std::endl;
+    std::cout << "idx[0][1] = " << idx[0][1].item<int>() << std::endl;
+
     auto preds = idx.view({idx.size(0), idx.size(1), 1}).repeat({1, 1, 2});
     preds = at::_cast_Float(preds);
     for (int i = 0; i < preds.size(1); ++i) {
@@ -74,23 +133,33 @@ DecodeOutput(at::Tensor &outputTensor, float* center, float scale)
         preds[0][i][1] = preds[0][i][1].add_(-1).div_(outputTensor.size(2)).floor_().add_(1);
     }
 
-    std::cout << "0" << std::endl;
+    std::cout << "preds.sizes() = " << preds.sizes() << std::endl;
+    std::cout << "0: preds[0][0] " << preds[0][0][0].item<float>() << "," << preds[0][0][1].item<float>() << std::endl;
 
     for (int i = 0; i < preds.size(0); ++i) {
         for (int j = 0; j < preds.size(1); ++j) {
-            int pX = int(preds[i][j][0].item<int>()) - 1;
-            int pY = int(preds[i][j][1].item<int>()) - 1;
+            float pX = float(preds[i][j][0].item<float>()) - 1;
+            float pY = float(preds[i][j][1].item<float>()) - 1;
+            if (i == 0 && j == 0) std::cout << "pX,pY" << pX << "," << pY << std::endl;
             if (pX > 0 && pX < 63 && pY > 0 && pY < 63) {
                 std::vector<at::Tensor> diff = {
                     outputTensor[i][j][pY][pX + 1] - outputTensor[i][j][pY][pX - 1],
                     outputTensor[i][j][pY + 1][pX] - outputTensor[i][j][pY - 1][pX]};
-                preds[i][j][0] = diff[0].add_(diff[0].sign_().mul_(.25));
-                preds[i][j][1] = diff[1].add_(diff[0].sign_().mul_(.25));
+                if (i == 0 && j == 0) { 
+                    std::cout << "diff = " << diff[0].item<float>() << "," << diff[1].item<float>() << std::endl;
+                    std::cout << "outputTensor[i][j][pY][pX + 1] = " << outputTensor[i][j][pY][pX + 1].item<float>() << std::endl;
+                }
+                preds[i][j][0] = preds[i][j][0].add_(diff[0].sign_().mul_(.25));
+                preds[i][j][1] = preds[i][j][1].add_(diff[0].sign_().mul_(.25));
             }
         }
     }
 
+    std::cout << "1: preds[0][0] " << preds[0][0][0].item<float>() << "," << preds[0][0][1].item<float>() << std::endl;
+
     preds = preds.add_(-.5);
+
+    std::cout << "2: preds[0][0] " << preds[0][0][0].item<float>() << "," << preds[0][0][1].item<float>() << std::endl;
 
     auto preds_orig = at::zeros(preds.sizes());
     for (int i = 0; i < outputTensor.size(0); ++i) {
@@ -104,12 +173,11 @@ DecodeOutput(at::Tensor &outputTensor, float* center, float scale)
     
     preds_orig = preds_orig.view({68, 2});
 
-    std::cout << "preds_orig[30] = " << preds_orig[30][0].item<int>() << "," << preds_orig[30][1].item<int>() << std::endl;
-    std::cout << "preds_orig[48] = " << preds_orig[48][0].item<int>() << "," << preds_orig[48][1].item<int>() << std::endl;
-    std::cout << "preds_orig[54] = " << preds_orig[54][0].item<int>() << "," << preds_orig[54][1].item<int>() << std::endl;
+    std::vector<int>landmarks = Convert68To5(preds_orig);
 
-    std::vector<int> landmarks;
-    
+    std::cout << "nose        = " << landmarks[4] << "," << landmarks[5] << std::endl;
+    std::cout << "left mouth  = " << landmarks[6] << "," << landmarks[7] << std::endl;
+    std::cout << "right mouth = " << landmarks[8] << "," << landmarks[9] << std::endl;
 
     return landmarks;
 }
@@ -136,10 +204,18 @@ FanLandmarksDetector::Detect(const ImageData& imageData, const Rect &face) const
     int d[] = {face.x1, face.y1, face.x2, face.y2};
     float center[] = {d[2] - (d[2] - d[0]) / 2.0f, d[3] - (d[3] - d[1]) / 2.0f};
     center[1] = center[1] - (d[3] - d[1]) * 0.12f;
-    float scale = (d[2] - d[0] + d[3] - d[1]) / REFERENCE_SCALE;
+    float scale = float(d[2] - d[0] + d[3] - d[1]) / REFERENCE_SCALE;
+
+    std::cout << "d[2] - d[0] + d[3] - d[1] = " << d[2] - d[0] + d[3] - d[1] << std::endl;
+    std::cout << "center = " << center[0] << "," << center[1] << std::endl;
+    std::cout << "scale = " << scale << std::endl;
+
+    cv::imwrite("/home/administrator/nist/frvt/debug/full.png", image);
 
     // Crop image
     image = CropImage(image, center, scale);
+
+    cv::imwrite("/home/administrator/nist/frvt/debug/crop.png", image);
 
     // create image tensor
     std::vector<int64_t> sizes = {1, image.rows, image.cols, image.channels()};
@@ -162,11 +238,15 @@ FanLandmarksDetector::Detect(const ImageData& imageData, const Rect &face) const
 
     // Adjust output
     auto landmarks = DecodeOutput(outputTensor, center, scale);
-    //pts, pts_img = get_preds_fromhm(out, center, scale)
-    //pts, pts_img = pts.view(68, 2) * 4, pts_img.view(68, 2)
-    //infer_detection(detections[0])
 
     std::cout << "Done!" << std::endl;
+
+    // dump image with landmarks
+    cv::Mat image2(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
+    for (int i = 0; i < 5; ++i) {
+        cv::circle(image2, cv::Point(landmarks[i*2], landmarks[i*2+1]), 1, cv::Scalar(0, 255, 0), 8);
+    }
+    cv::imwrite("/home/administrator/nist/frvt/debug/landmarks.png", image2);
 
     return landmarks;
 }
