@@ -33,7 +33,7 @@ Transform(std::vector<float> point, float* center, float scale, float resolution
 }
 
 cv::Mat
-CropImage(const cv::Mat &image, float* center, float scale , float resolution=256.0f)
+CropImage(const cv::Mat &image, float* center, float scale, float resolution=256.0f)
 {
     // Crop around the center point
     /* Crops the image around the center. Input is expected to be an np.ndarray */
@@ -57,6 +57,61 @@ CropImage(const cv::Mat &image, float* center, float scale , float resolution=25
     cv::resize(newImg, newImg, cv::Size(resolution, resolution), 0, 0, cv::INTER_LINEAR);
 
     return newImg;
+}
+
+std::vector<int>
+DecodeOutput(at::Tensor &outputTensor, float* center, float scale)
+{
+    auto res = outputTensor.view({outputTensor.size(0), outputTensor.size(1), outputTensor.size(2) * outputTensor.size(3)}).max(2);
+    auto maxValue = std::get<0>(res);
+    auto idx = std::get<1>(res);
+    idx = idx + 1;
+
+    auto preds = idx.view({idx.size(0), idx.size(1), 1}).repeat({1, 1, 2});
+    preds = at::_cast_Float(preds);
+    for (int i = 0; i < preds.size(1); ++i) {
+        preds[0][i][0] = (preds[0][i][0] - 1) % outputTensor.size(3) + 1;
+        preds[0][i][1] = preds[0][i][1].add_(-1).div_(outputTensor.size(2)).floor_().add_(1);
+    }
+
+    std::cout << "0" << std::endl;
+
+    for (int i = 0; i < preds.size(0); ++i) {
+        for (int j = 0; j < preds.size(1); ++j) {
+            int pX = int(preds[i][j][0].item<int>()) - 1;
+            int pY = int(preds[i][j][1].item<int>()) - 1;
+            if (pX > 0 && pX < 63 && pY > 0 && pY < 63) {
+                std::vector<at::Tensor> diff = {
+                    outputTensor[i][j][pY][pX + 1] - outputTensor[i][j][pY][pX - 1],
+                    outputTensor[i][j][pY + 1][pX] - outputTensor[i][j][pY - 1][pX]};
+                preds[i][j][0] = diff[0].add_(diff[0].sign_().mul_(.25));
+                preds[i][j][1] = diff[1].add_(diff[0].sign_().mul_(.25));
+            }
+        }
+    }
+
+    preds = preds.add_(-.5);
+
+    auto preds_orig = at::zeros(preds.sizes());
+    for (int i = 0; i < outputTensor.size(0); ++i) {
+        for (int j = 0; j < outputTensor.size(1); ++j) {
+            std::vector<float> point = {preds[i][j][0].item<float>(), preds[i][j][1].item<float>()};
+            auto transformed = Transform(point, center, scale, outputTensor.size(2), true);
+            preds_orig[i][j][0] = transformed[0];
+            preds_orig[i][j][1] = transformed[1];
+        }
+    }
+    
+    preds_orig = preds_orig.view({68, 2});
+
+    std::cout << "preds_orig[30] = " << preds_orig[30][0].item<int>() << "," << preds_orig[30][1].item<int>() << std::endl;
+    std::cout << "preds_orig[48] = " << preds_orig[48][0].item<int>() << "," << preds_orig[48][1].item<int>() << std::endl;
+    std::cout << "preds_orig[54] = " << preds_orig[54][0].item<int>() << "," << preds_orig[54][1].item<int>() << std::endl;
+
+    std::vector<int> landmarks;
+    
+
+    return landmarks;
 }
 
 FanLandmarksDetector::FanLandmarksDetector(const std::string &configDir)
@@ -101,13 +156,17 @@ FanLandmarksDetector::Detect(const ImageData& imageData, const Rect &face) const
     // Inference
     torch::jit::IValue output = mLandmarksDetector->forward({tensorImage});
 
+    // Convert output to Tensors    
+    c10::intrusive_ptr<c10::ivalue::Tuple> outputTuple = output.toTuple();
+    at::Tensor outputTensor = outputTuple->elements()[outputTuple->elements().size()-1].toTensor();
+
     // Adjust output
+    auto landmarks = DecodeOutput(outputTensor, center, scale);
     //pts, pts_img = get_preds_fromhm(out, center, scale)
     //pts, pts_img = pts.view(68, 2) * 4, pts_img.view(68, 2)
     //infer_detection(detections[0])
 
     std::cout << "Done!" << std::endl;
 
-    std::vector<int> landmarks;
     return landmarks;
 }
