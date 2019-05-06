@@ -7,6 +7,7 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../include ${CMAKE_CURRENT_SOUR
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 
 find_package (Torch REQUIRED)
+find_package (OpenCV REQUIRED)
 
 file(GLOB algo_src
     "../algo/*.h"
@@ -17,3 +18,4 @@ file(GLOB algo_src
 add_library (frvt_11_null_001 SHARED ${algo_src} nullimplfrvt11.cpp)
 
 target_link_libraries (frvt_11_null_001 "${TORCH_LIBRARIES}")
+target_link_libraries (frvt_11_null_001 ${OpenCV_LIBS})

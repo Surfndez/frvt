@@ -1,95 +1,69 @@
 #include <algorithm>
 
 #include <torch/script.h>
+#include <opencv2/core.hpp>
 
 #include "FanLandmarksDetector.h"
-#include "Inverse.h"
 
 using namespace FRVT_11;
 
 int REFERENCE_SCALE = 195;
 
-at::Tensor InverseMatrix(float** mat)
+std::vector<int>
+Transform(std::vector<float> point, float* center, float scale, float resolution, bool invert=false)
 {
-    int mat[3][3], i, j;
-	
-    // Enter elements of matrix row wise
-	for(i = 0; i < 3; i++) {
-		for(j = 0; j < 3; j++) {
-            mat[i][j] = matTensor[i][j].item<float>();
-        }
-    }
+    std::cout << "Transform 0" << std::endl;
 
-    //finding determinant
-    float determinant = 0;
-	for(i = 0; i < 3; i++)
-		determinant = determinant + (mat[0][i] * (mat[1][(i+1)%3] * mat[2][(i+2)%3] - mat[1][(i+2)%3] * mat[2][(i+1)%3]));
-
-    // Inverse matrix
-    std::vector<float> inverseMat;
-	for(i = 0; i < 3; i++) {
-		for(j = 0; j < 3; j++) {
-			auto v = ((mat[(j+1)%3][(i+1)%3] * mat[(j+2)%3][(i+2)%3]) - (mat[(j+1)%3][(i+2)%3] * mat[(j+2)%3][(i+1)%3]))/ determinant;
-            inverseMat.push_back(v);
-        }
-    }
-
-    auto newMatTensor = torch::tensor(inverseMat, torch::requires_grad(false).dtype(torch::kFloat32)).view({3, 3});
-
-    return newMatTensor;
-}
-
-at::Tensor
-transform(std::vector<float> point, at::Tensor center, int scale, float resolution, bool invert=false)
-{
-    std::vector<float> _pt = {1, 1, 1};
-    _pt[0] = point[0];
-    _pt[1] = point[1];
+    cv::Mat _pt = cv::Mat::ones(3, 1, CV_32FC1);
+    _pt.at<float>(0, 0) = point[0];
+    _pt.at<float>(1, 0) = point[1];
 
     auto h = 200.0 * scale;
-    std::vector<float> t = {1, 0, 0, /**/ 0, 1, 0, /**/ 0, 0, 1};
-    t[0][0] = resolution / h;
-    t[1][1] = resolution / h;
-    t[0][2] = resolution * (-center[0] / h + 0.5);
-    t[1][2] = resolution * (-center[1] / h + 0.5);
+    cv::Mat t = cv::Mat::eye(3, 3, CV_32FC1);
+    t.at<float>(0, 0) = resolution / h;
+    t.at<float>(1, 1) = resolution / h;
+    t.at<float>(0, 2) = resolution * (-center[0] / h + 0.5);
+    t.at<float>(1, 2) = resolution * (-center[1] / h + 0.5);
 
     if (invert)
-        t = InverseMatrix(t);
+        t = t.inv();
 
-    auto new_point = at::matmul(t, _pt);
-    new_point = new_point.slice(0, 0, 2); //[0:2];
+    cv::Mat new_point = t * _pt;
 
-    return new_point;
+    return {int(new_point.at<float>(0, 0)), int(new_point.at<float>(1, 0))};
 }
 
-at::Tensor
-CropImage(at::Tensor &tensorImage, int* center, int scale , float resolution=256.0f)
+cv::Mat
+CropImage(const cv::Mat &image, float* center, float scale , float resolution=256.0f)
 {
     std::cout << "CropImage 0" << std::endl;
 
     // Crop around the center point
     /* Crops the image around the center. Input is expected to be an np.ndarray */
-    auto ul = transform({1, 1}, center, scale, resolution, true);
-    auto br = transform({resolution, resolution}, center, scale, resolution, true);
+    auto ul = Transform({1, 1}, center, scale, resolution, true);
+    auto br = Transform({resolution, resolution}, center, scale, resolution, true);
 
     std::cout << "CropImage 1" << std::endl;
 
-    auto newImg = at::zeros({1, int(*(br[1] - ul[1]).data<float>()), int(*(br[0] - ul[0]).data<float>()), tensorImage.sizes()[3]}, at::ScalarType::Byte);
-
-    auto ht = tensorImage.sizes()[1];
-    auto wd = tensorImage.sizes()[2];
+    cv::Mat newImg = cv::Mat::zeros(br[1] - ul[1], br[0] - ul[0], CV_8UC3);
 
     std::cout << "CropImage 2" << std::endl;
 
-    auto newX = {std::max(1, -int(*(ul[0].data<float>())) + 1), std::min(int(*br[0].data<float>()), int(wd)) - int(*ul[0].data<float>())};
-    auto newY = {std::max(1, -int(*(ul[1].data<float>())) + 1), std::min(int(*br[1].data<float>()), int(ht)) - int(*ul[1].data<float>())};
+    auto ht = image.rows;
+    auto wd = image.cols;
 
-    std::cout << "CropImage 3" << std::endl;
+    std::vector<int> newX = {std::max(1, -ul[0] + 1), std::min(br[0], wd) - ul[0]};
+    std::vector<int> newY = {std::max(1, -ul[1] + 1), std::min(br[1], ht) - ul[1]};
 
-    //auto oldX = {}; // np.array([max(1, ul[0] + 1), min(br[0], wd)], dtype=np.int32)
-    //auto oldY = {}; // np.array([max(1, ul[1] + 1), min(br[1], ht)], dtype=np.int32)
+    std::vector<int> oldX = {std::max(1, ul[0]) + 1, std::min(br[0], wd)};
+    std::vector<int> oldY = {std::max(1, ul[1]) + 1, std::min(br[1], ht)};
 
-    return tensorImage;
+    std::cout << "CropImage 3 " << oldX[0] << "," << oldY[0] << "," << oldX[1] << "," << oldY[1] << std::endl;
+    cv::Mat oldImg = image(cv::Range(oldY[0] - 1, oldY[1]), cv::Range(oldX[0] - 1, oldX[1]));
+    std::cout << "CropImage 4 " << newX[0] << "," << newY[0] << "," << newX[1] << "," << newY[1] << std::endl;
+    oldImg.copyTo(newImg(cv::Rect(newX[0] - 1, newY[0] - 1, newX[1] - newX[0] + 1, newY[1] - newY[0] + 1)));
+
+    return newImg;
 }
 
 FanLandmarksDetector::FanLandmarksDetector(const std::string &configDir)
@@ -106,34 +80,30 @@ FanLandmarksDetector::~FanLandmarksDetector() {}
 std::vector<int>
 FanLandmarksDetector::Detect(const ImageData& imageData, const Rect &face) const
 {
-    std::cout << "Detect landmarks... ";
+    std::cout << "Detect landmarks... " << std::endl;
 
-    // create image tensor
-    std::vector<int64_t> sizes = {1, imageData.height, imageData.width, imageData.channels};
-    at::TensorOptions options(at::ScalarType::Byte);
-    at::Tensor tensorImage = torch::from_blob(imageData.data.get(), at::IntList(sizes), options);
-    tensorImage = tensorImage.toType(at::kFloat);
-
-    std::cout << " 3 ";
+    cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
 
     // calculate center and scale
     int d[] = {face.x1, face.y1, face.x2, face.y2};
-    float center[] = {float(d[2] - (d[2] - d[0]) / 2.0), float(d[3] - (d[3] - d[1]) / 2.0)};
-    center[1] = center[1] - (d[3] - d[1]) * 0.12;
+    float center[] = {d[2] - (d[2] - d[0]) / 2.0f, d[3] - (d[3] - d[1]) / 2.0f};
+    center[1] = center[1] - (d[3] - d[1]) * 0.12f;
     float scale = (d[2] - d[0] + d[3] - d[1]) / REFERENCE_SCALE;
 
-    std::cout << " 2 ";
-
     // Crop image
-    tensorImage = CropImage(tensorImage, center, scale);
+    image = CropImage(image, center, scale);
+
+    // create image tensor
+    std::vector<int64_t> sizes = {1, image.rows, image.cols, image.channels()};
+    at::TensorOptions options(at::ScalarType::Byte);
+    at::Tensor tensorImage = torch::from_blob(image.data, at::IntList(sizes), options);
+    tensorImage = tensorImage.toType(at::kFloat);
 
     // HWC -> CHW
     tensorImage = tensorImage.permute({0, 3, 1, 2});
 
     // Normalize image
-    tensorImage = tensorImage.div(255.0).unsqueeze_(0);
-
-    std::cout << " 1 ";
+    tensorImage = tensorImage.div(255.0);
 
     // Inference
     torch::jit::IValue output = mLandmarksDetector->forward({tensorImage});
