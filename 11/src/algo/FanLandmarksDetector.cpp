@@ -6,9 +6,6 @@
 
 #include "FanLandmarksDetector.h"
 
-//for debug
-#include <opencv2/highgui.hpp>
-
 using namespace FRVT_11;
 
 int REFERENCE_SCALE = 195.0f;
