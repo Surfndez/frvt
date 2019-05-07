@@ -14,6 +14,7 @@
 #include "nullimplfrvt11.h"
 #include "../algo/SfdFaceDetector.h"
 #include "../algo/FanLandmarksDetector.h"
+#include "../algo/SphereFaceRecognizer.h"
 
 using namespace std;
 using namespace FRVT;
@@ -28,6 +29,7 @@ NullImplFRVT11::initialize(const std::string &configDir)
 {
     mFaceDetector = std::make_shared<SfdFaceDetector>(configDir);
     mLandmarksDetector = std::make_shared<FanLandmarksDetector>(configDir);
+    mFaceRecognizer = std::make_shared<SphereFaceRecognizer>(configDir);
 
     return ReturnStatus(ReturnCode::Success);
 }
@@ -39,6 +41,8 @@ NullImplFRVT11::createTemplate(
         std::vector<uint8_t> &templ,
         std::vector<EyePair> &eyeCoordinates)
 {
+    std::vector<std::vector<float>> templates;
+
     for(const Image &image: faces) {        
         int channels = int(image.depth / 8);
         ImageData imageData(image.data, image.width, image.height, channels);
@@ -47,7 +51,13 @@ NullImplFRVT11::createTemplate(
 
         for (const Rect &rect : rects) {
             std::vector<int> landmarks = mLandmarksDetector->Detect(imageData, rect);
-        }
+            
+            eyeCoordinates.push_back(EyePair(true, true, landmarks[0], landmarks[1], landmarks[2], landmarks[3]));
+
+            std::vector<float> features = mFaceRecognizer->Infer(imageData, landmarks);
+
+            break; // should be only one face in image
+        }        
     }
 
     /* Note: example code, potentially not portable across machines. */
@@ -56,10 +66,6 @@ NullImplFRVT11::createTemplate(
     int dataSize = sizeof(float) * fv.size();
     templ.resize(dataSize);
     memcpy(templ.data(), bytes, dataSize);
-
-    for (unsigned int i=0; i<faces.size(); i++) {
-        eyeCoordinates.push_back(EyePair(true, true, i, i, i+1, i+1));
-    }
 
     return ReturnStatus(ReturnCode::Success);
 }

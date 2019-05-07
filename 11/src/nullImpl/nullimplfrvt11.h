@@ -14,6 +14,7 @@
 #include "frvt11.h"
 #include "../algo/FaceDetector.h"
 #include "../algo/LandmarksDetector.h"
+#include "../algo/FaceRecognizer.h"
 
 /*
  * Declare the implementation class of the FRVT 1:1 Interface
@@ -50,6 +51,7 @@ private:
         
     std::shared_ptr<FaceDetector> mFaceDetector;
     std::shared_ptr<LandmarksDetector> mLandmarksDetector;
+    std::shared_ptr<FaceRecognizer> mFaceRecognizer;
 };
 }
 
