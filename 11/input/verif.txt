@@ -2,4 +2,3 @@
 4 ../common/images/S001-04-t10_01.ppm MUGSHOT
 12 ../common/images/S002-01-t10_01.ppm MUGSHOT
 14 ../common/images/S004-01-t10_01.ppm MUGSHOT
-16 ../common/images/S006-01-t10_01.ppm MUGSHOT

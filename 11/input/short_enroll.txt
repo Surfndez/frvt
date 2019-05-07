@@ -1,2 +1,1 @@
 1 ../common/images/S001-01-t10_01.ppm MUGSHOT
-3 ../common/images/S001-03-t10_01.ppm MUGSHOT
