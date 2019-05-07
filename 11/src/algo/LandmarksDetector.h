@@ -1,6 +1,8 @@
 #ifndef LANDMARKSDETECTOR_H_
 #define LANDMARKSDETECTOR_H_
 
+#include <vector>
+
 #include "Rect.h"
 #include "ImageData.h"
 

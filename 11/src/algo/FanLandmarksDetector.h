@@ -1,7 +1,6 @@
 #ifndef FANLANDMARKSDETECTOR_H_
 #define FANLANDMARKSDETECTOR_H_
 
-#include <vector>
 #include <string>
 #include <memory>
 
