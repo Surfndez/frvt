@@ -1,24 +1,66 @@
+#include <algorithm>
+
 #include "SphereFaceRecognizer.h"
 
 #include <inference_engine.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <opencv2/highgui.hpp>
+
 using namespace FRVT_11;
 using namespace InferenceEngine;
 
 cv::Mat
+CropImage(const cv::Mat& image, const std::vector<int>& landmarks)
+{
+    std::vector<int> xPoints;
+    std::vector<int> yPoints;
+    for (int i = 0; i < 10; i += 2) {
+        xPoints.push_back(landmarks[i]);
+        yPoints.push_back(landmarks[i+1]);
+    }
+
+    int xMin = *std::min_element(xPoints.begin(), xPoints.end());
+    int xMax = *std::max_element(xPoints.begin(), xPoints.end());
+    int yMin = *std::min_element(yPoints.begin(), yPoints.end());
+    int yMax = *std::max_element(yPoints.begin(), yPoints.end());
+    
+    int w = (xMax - xMin);
+    int h = (yMax - yMin);
+    
+    int x1 = xMin - int(w * 0.75);
+    int x2 = xMax + int(w * 0.75);
+    int y1 = yMin - int(h * 0.75);
+    int y2 = yMax + int(h * 0.75);
+
+    x1 = std::max(0, x1);
+    x2 = std::min(image.cols, x2);
+    y1 = std::max(0, y1);
+    y2 = std::min(image.rows, y2);
+
+    cv::Mat cropped = image(cv::Range(y1, y2), cv::Range(x1, x2));
+
+    //cv::imwrite("/home/administrator/nist/frvt/debug/fa_cropped.png", cropped);
+
+    return cropped;
+}
+
+cv::Mat
 NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
 {
+    // crop
+    cv::Mat cropped = CropImage(image, landmarks);
+
     // To gray scale
     cv::Mat gray;
-    cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+    cv::cvtColor(cropped, gray, cv::COLOR_BGR2GRAY);
 
     // normalized
     gray.convertTo(gray, CV_32FC1);
     gray /= 255;
     gray -= 0.5;
 
-    // For starters... just resize
+    // resize
     cv::resize(gray, gray, cv::Size(128, 128), 0, 0, cv::INTER_LINEAR);
 
     return gray;
@@ -92,13 +134,14 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
 
     // --------------------------- 7. Do inference --------------------------------------------------------
     /* Running the request synchronously */
-    std::cout << "Do inference..." << std::endl;
+    std::cout << "Do inference... ";
     infer_request.Infer();
     // -----------------------------------------------------------------------------------------------------
 
     // --------------------------- 8. Process output ------------------------------------------------------
     Blob::Ptr output = infer_request.GetBlob(mOutputName);
     std::cout << "output.dims() = " << output->size() << std::endl;
+    // TODO: output to float vector
     // -----------------------------------------------------------------------------------------------------
 
     std::cout << "Done!" << std::endl;

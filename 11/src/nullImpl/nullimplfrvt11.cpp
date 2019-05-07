@@ -60,6 +60,9 @@ NullImplFRVT11::createTemplate(
         }        
     }
 
+    // average pool on features
+    // ...
+
     /* Note: example code, potentially not portable across machines. */
     std::vector<float> fv = {1.0, 2.0, 8.88, 765.88989};
     const uint8_t* bytes = reinterpret_cast<const uint8_t*>(fv.data());
