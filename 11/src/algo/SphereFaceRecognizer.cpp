@@ -54,10 +54,6 @@ SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
     output_info->setPrecision(Precision::FP32);
     // -----------------------------------------------------------------------------------------------------
 
-    // --------------------------- 4. Loading model to the plugin ------------------------------------------
-    mExecutableNetwork = std::make_shared<ExecutableNetwork>(mInferencePlugin->LoadNetwork(*mCNNNetwork, {}));
-    // -----------------------------------------------------------------------------------------------------
-
     // Set private members
     mInputName = input_name;
     mOutputName = output_name;
@@ -73,6 +69,10 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
     
     image = NormalizeImage(image, landmarks);
+
+    // --------------------------- 4. Loading model to the plugin ------------------------------------------
+    auto mExecutableNetwork = std::make_shared<ExecutableNetwork>(mInferencePlugin->LoadNetwork(*mCNNNetwork, {}));
+    // -----------------------------------------------------------------------------------------------------
 
     // --------------------------- 5. Create infer request -------------------------------------------------
     InferRequest infer_request = mExecutableNetwork->CreateInferRequest();
@@ -92,7 +92,7 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
 
     // --------------------------- 7. Do inference --------------------------------------------------------
     /* Running the request synchronously */
-    std::cout << "run inference..." << std::endl;
+    std::cout << "Do inference..." << std::endl;
     infer_request.Infer();
     // -----------------------------------------------------------------------------------------------------
 
