@@ -5,6 +5,10 @@
 
 #include "FaceRecognizer.h"
 
+namespace InferenceEngine {
+    class ExecutableNetwork;
+}
+
 namespace FRVT_11 {
     class SphereFaceRecognizer : public FaceRecognizer  {
 public:
@@ -14,6 +18,9 @@ public:
     virtual std::vector<float> Infer(const ImageData& imageData, const std::vector<int>& landmarks) const override;
 
 private:
+    std::shared_ptr<InferenceEngine::ExecutableNetwork> mExecutableNetwork;
+    std::string mInputName;
+    std::string mOutputName;
 };
 }
 
