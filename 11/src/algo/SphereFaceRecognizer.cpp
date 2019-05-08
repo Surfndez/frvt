@@ -54,7 +54,7 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
 
     // To gray scale
     cv::Mat gray;
-    cv::cvtColor(cropped, gray, cv::COLOR_BGR2GRAY);
+    cv::cvtColor(cropped, gray, cv::COLOR_RGB2GRAY);
 
     // normalized
     gray.convertTo(gray, CV_32FC1);
