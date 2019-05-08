@@ -11,6 +11,8 @@
 #include <cstring>
 #include <cstdlib>
 
+#include <opencv2/core.hpp>
+
 #include "nullimplfrvt11.h"
 #include "../algo/SfdFaceDetector.h"
 #include "../algo/FanLandmarksDetector.h"
@@ -61,12 +63,18 @@ NullImplFRVT11::createTemplate(
     }
 
     // average pool on features
-    // ...
+    cv::Mat output_features = cv::Mat::zeros(512, 1, CV_32F);
+    for (const std::vector<float>& f : templates) {
+        for (int i = 0; i < f.size(); ++i) {
+            output_features.at<float>(i, 1) += f[i];
+        }
+    }
+    output_features /= templates.size();
+    output_features /= cv::norm(output_features);
 
     /* Note: example code, potentially not portable across machines. */
-    std::vector<float> fv = {1.0, 2.0, 8.88, 765.88989};
-    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(fv.data());
-    int dataSize = sizeof(float) * fv.size();
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>((const uint8_t*)output_features.data);
+    int dataSize = sizeof(float) * output_features.rows;
     templ.resize(dataSize);
     memcpy(templ.data(), bytes, dataSize);
 
@@ -85,9 +93,17 @@ NullImplFRVT11::matchTemplates(
     for (unsigned int i=0; i<this->featureVectorSize; i++) {
 	std::cout << featureVector[i] << std::endl;
     }
-    */
 
     similarity = rand() % 1000 + 1;
+    */
+
+    cv::Mat f1(512, 1, CV_32F, (float *)verifTemplate.data());
+    cv::Mat f2(512, 1, CV_32F, (float *)enrollTemplate.data());
+
+    similarity = 300 * (3 - cv::norm(f1 - f2));
+
+    std::cout << "Similarity = " << similariry << std::endl;
+
     return ReturnStatus(ReturnCode::Success);
 }
 

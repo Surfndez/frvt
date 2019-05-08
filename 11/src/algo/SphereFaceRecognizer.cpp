@@ -5,7 +5,7 @@
 #include <inference_engine.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include <opencv2/highgui.hpp>
+//#include <opencv2/highgui.hpp>
 
 using namespace FRVT_11;
 using namespace InferenceEngine;
