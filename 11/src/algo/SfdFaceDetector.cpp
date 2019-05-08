@@ -93,7 +93,7 @@ SfdFaceDetector::~SfdFaceDetector() {}
 std::vector<Rect>
 SfdFaceDetector::Detect(const ImageData &image) const
 {
-    std::cout << std::endl << "Detect: (" << image.height << "," << image.width << "," << image.channels << ")" << std::endl;
+    std::cout << std::endl << "Detect: (" << image.height << "," << image.width << "," << image.channels << ") ... ";
 
     // Image data to tensor
     std::vector<int64_t> sizes = {1, image.height, image.width, image.channels};

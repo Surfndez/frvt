@@ -58,6 +58,8 @@ NullImplFRVT11::createTemplate(
 
             std::vector<float> features = mFaceRecognizer->Infer(imageData, landmarks);
 
+            templates.push_back(features);
+
             break; // should be only one face in image
         }        
     }
@@ -66,9 +68,10 @@ NullImplFRVT11::createTemplate(
     cv::Mat output_features = cv::Mat::zeros(512, 1, CV_32F);
     for (const std::vector<float>& f : templates) {
         for (int i = 0; i < f.size(); ++i) {
-            output_features.at<float>(i, 1) += f[i];
+            output_features.at<float>(i, 0) += f[i];
         }
     }
+
     output_features /= templates.size();
     output_features /= cv::norm(output_features);
 
@@ -87,22 +90,14 @@ NullImplFRVT11::matchTemplates(
         const std::vector<uint8_t> &enrollTemplate,
         double &similarity)
 {
-    /*
-    float *featureVector = (float *)enrollTemplate.data();
-
-    for (unsigned int i=0; i<this->featureVectorSize; i++) {
-	std::cout << featureVector[i] << std::endl;
-    }
-
-    similarity = rand() % 1000 + 1;
-    */
+    std::cout << "Calculate similarity... ";
 
     cv::Mat f1(512, 1, CV_32F, (float *)verifTemplate.data());
     cv::Mat f2(512, 1, CV_32F, (float *)enrollTemplate.data());
 
     similarity = 300 * (3 - cv::norm(f1 - f2));
 
-    std::cout << "Similarity = " << similariry << std::endl;
+    std::cout << similarity << std::endl;
 
     return ReturnStatus(ReturnCode::Success);
 }

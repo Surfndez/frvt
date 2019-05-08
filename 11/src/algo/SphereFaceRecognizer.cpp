@@ -3,6 +3,7 @@
 #include "SphereFaceRecognizer.h"
 
 #include <inference_engine.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
 //#include <opencv2/highgui.hpp>
@@ -106,7 +107,7 @@ SphereFaceRecognizer::~SphereFaceRecognizer() {}
 std::vector<float>
 SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& landmarks) const
 {
-    std::cout << "Sphere inference... " << std::endl;
+    std::cout << "Sphere inference... ";
 
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
     
@@ -134,18 +135,22 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
 
     // --------------------------- 7. Do inference --------------------------------------------------------
     /* Running the request synchronously */
-    std::cout << "Do inference... ";
     infer_request.Infer();
     // -----------------------------------------------------------------------------------------------------
 
     // --------------------------- 8. Process output ------------------------------------------------------
     Blob::Ptr output = infer_request.GetBlob(mOutputName);
-    std::cout << "output.dims() = " << output->size() << std::endl;
-    // TODO: output to float vector
+    const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
     // -----------------------------------------------------------------------------------------------------
+
+    // normalize vector
+    cv::Mat featuresMat(512, 1, CV_32F, result);
+    featuresMat /= cv::norm(featuresMat);
+
+    // convert to vector (function should be changed to return cv::Mat)
+    std::vector<float> features(featuresMat.data, featuresMat.data + 512);
 
     std::cout << "Done!" << std::endl;
 
-    std::vector<float> features;
     return features;
 }

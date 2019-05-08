@@ -151,7 +151,7 @@ FanLandmarksDetector::~FanLandmarksDetector() {}
 std::vector<int>
 FanLandmarksDetector::Detect(const ImageData& imageData, const Rect &face) const
 {
-    std::cout << "Detect landmarks... " << std::endl;
+    std::cout << "Detect landmarks... ";
 
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
 
@@ -186,7 +186,7 @@ FanLandmarksDetector::Detect(const ImageData& imageData, const Rect &face) const
     // Adjust output
     auto landmarks = DecodeOutput(outputTensor, center, scale);
 
-    std::cout << "Done! " << "[[" << landmarks[0] << "," << landmarks[1] << "],[" << landmarks[2] << "," << landmarks[3] << "]]" << std::endl;
+    std::cout << "Found: " << "[[" << landmarks[0] << "," << landmarks[1] << "],[" << landmarks[2] << "," << landmarks[3] << "]]" << std::endl;
 
     return landmarks;
 }
