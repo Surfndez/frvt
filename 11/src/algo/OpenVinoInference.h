@@ -2,8 +2,9 @@
 #define OPENVINOINFERENCE_H_
 
 #include <memory>
-
 #include <opencv2/core.hpp>
+
+#include "InferenceEngine.h"
 
 namespace InferenceEngine {
     class InferencePlugin;
@@ -14,11 +15,11 @@ namespace InferenceEngine {
 }
 
 namespace FRVT_11 {
-    class OpenVinoInference {
+    class OpenVinoInference : public IInferenceEngine {
 public:
     OpenVinoInference(const std::string &modelPath);
 
-    std::shared_ptr<InferenceEngine::Blob> Infer(const cv::Mat& image);
+    std::shared_ptr<InferenceEngine::Blob> Infer(const cv::Mat& image) const;
 
 
 private:
