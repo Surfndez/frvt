@@ -15,15 +15,23 @@ extern "C"
 namespace FRVT_11 {
     class TensorFlowInference : public IInferenceEngine {
 public:
+    template<typename T>
+	using deleted_unique_ptr = std::unique_ptr<T, std::function<void(T*)>>;
+
     TensorFlowInference(const std::string &modelPath, std::initializer_list<std::string> inputLayers, std::initializer_list<std::string> outputLayers);
 
-    void Infer(const cv::Mat& image);
+    void Init();
+
+    std::vector<deleted_unique_ptr<TF_Tensor>> Infer(const cv::Mat& image);
 
 private:
     TF_Graph* graph;
     TF_Status* status;
     TF_SessionOptions* options;
     TF_Session* sess;
+
+    std::vector<std::string> mInputLayers;
+    std::vector<std::string> mOutputLayers;
 };
 }
 
