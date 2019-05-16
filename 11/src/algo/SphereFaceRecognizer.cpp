@@ -98,7 +98,10 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
     //std::cout << "embeddings[:5] = " << featuresMat.at<float>(0, 0) << "," << featuresMat.at<float>(1, 0) << "," << featuresMat.at<float>(2, 0) << "," << featuresMat.at<float>(3, 0) << "," << featuresMat.at<float>(4, 0) << std::endl;
 
     // convert to vector (function should be changed to return cv::Mat)
-    std::vector<float> features(featuresMat.data, featuresMat.data + 512);
+    std::vector<float> features(512);
+    for (int i = 0; i < 512; ++i) {
+        features[i] = featuresMat.at<float>(i, 0);
+    }
 
     std::cout << "Done!" << std::endl;
 

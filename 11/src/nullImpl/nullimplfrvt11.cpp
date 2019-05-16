@@ -14,7 +14,7 @@
 #include <opencv2/core.hpp>
 
 #include "nullimplfrvt11.h"
-#include "../algo/SfdFaceDetector.h"
+#include "../algo/SsdFaceDetector.h"
 #include "../algo/FanLandmarksDetector.h"
 #include "../algo/SphereFaceRecognizer.h"
 
@@ -29,7 +29,7 @@ NullImplFRVT11::~NullImplFRVT11() {}
 ReturnStatus
 NullImplFRVT11::initialize(const std::string &configDir)
 {
-    mFaceDetector = std::make_shared<SfdFaceDetector>(configDir);
+    mFaceDetector = std::make_shared<SsdFaceDetector>(configDir);
     mLandmarksDetector = std::make_shared<FanLandmarksDetector>(configDir);
     mFaceRecognizer = std::make_shared<SphereFaceRecognizer>(configDir);
 
@@ -64,6 +64,8 @@ NullImplFRVT11::createTemplate(
         }        
     }
 
+    //std::cout << "embeddings[:5] = " << templates[0][0] << "," << templates[0][1] << "," << templates[0][2] << std::endl;
+
     // average pool on features
     cv::Mat output_features = cv::Mat::zeros(512, 1, CV_32F);
     for (const std::vector<float>& f : templates) {
@@ -71,6 +73,8 @@ NullImplFRVT11::createTemplate(
             output_features.at<float>(i, 0) += f[i];
         }
     }
+
+    //std::cout << "averaged[:5] = " << output_features.at<float>(0, 0) << "," << output_features.at<float>(1, 0) << "," << output_features.at<float>(2, 0) << std::endl;
 
     output_features /= templates.size();
     output_features /= cv::norm(output_features);
