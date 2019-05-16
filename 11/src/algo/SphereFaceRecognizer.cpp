@@ -7,10 +7,8 @@
 
 #include <opencv2/highgui.hpp>
 
-#include "TensorFlowInference.h"
-
 using namespace FRVT_11;
-using namespace InferenceEngine;
+//using namespace InferenceEngine;
 
 cv::Mat
 CropImage(const cv::Mat& image, const std::vector<int>& landmarks)
@@ -71,10 +69,8 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
 SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
     std::string sphereModelPath = configDir + "/sphereface_v3-sphereface_v3_28_dm120_cosineface_bbox_0-4075000_features";
-
     mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(sphereModelPath, {"input"}, {"output_features"}));
-
-    mModelInference = std::make_shared<OpenVinoInference>(sphereModelPath);
+    //mModelInference = std::make_shared<OpenVinoInference>(sphereModelPath);
 }
 
 SphereFaceRecognizer::~SphereFaceRecognizer() {}
@@ -88,19 +84,18 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
     
     image = NormalizeImage(image, landmarks);
 
-    auto output = mModelInference->Infer(image);
-    const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
-    //mTensorFlowInference->Infer(image);
-    //std::vector<float> vectorResults(512, 1);
-    //const auto result = vectorResults.data();
+    //auto output = mModelInference->Infer(image);
+    //const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
+    auto output = mTensorFlowInference->Infer(image);
+    float* output_features = static_cast<float*>(TF_TensorData(output[0].get()));
 
-    std::cout << "features[:5] = " << result[0] << "," << result[1] << "," << result[2] << "," << result[3] << "," << result[4] << std::endl;
+    //std::cout << "features[:5] = " << output_features[0] << "," << output_features[1] << "," << output_features[2] << "," << output_features[3] << "," << output_features[4] << std::endl;
 
     // normalize vector
-    cv::Mat featuresMat(512, 1, CV_32F, result);
+    cv::Mat featuresMat(512, 1, CV_32F, output_features);
     featuresMat /= cv::norm(featuresMat);
 
-    std::cout << "embeddings[:5] = " << featuresMat.at<float>(0, 0) << "," << featuresMat.at<float>(1, 0) << "," << featuresMat.at<float>(2, 0) << "," << featuresMat.at<float>(3, 0) << "," << featuresMat.at<float>(4, 0) << std::endl;
+    //std::cout << "embeddings[:5] = " << featuresMat.at<float>(0, 0) << "," << featuresMat.at<float>(1, 0) << "," << featuresMat.at<float>(2, 0) << "," << featuresMat.at<float>(3, 0) << "," << featuresMat.at<float>(4, 0) << std::endl;
 
     // convert to vector (function should be changed to return cv::Mat)
     std::vector<float> features(featuresMat.data, featuresMat.data + 512);
