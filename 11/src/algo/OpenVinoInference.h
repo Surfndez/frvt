@@ -19,10 +19,13 @@ namespace FRVT_11 {
 public:
     OpenVinoInference(const std::string &modelPath);
 
-    std::shared_ptr<InferenceEngine::Blob> Infer(const cv::Mat& image) const;
+    void Init();
 
+    std::shared_ptr<InferenceEngine::Blob> Infer(const cv::Mat& image);
 
 private:
+    std::string mModelPath;
+
     std::shared_ptr<InferenceEngine::InferencePlugin> mInferencePlugin;
     std::shared_ptr<InferenceEngine::CNNNetwork> mCNNNetwork;
     std::shared_ptr<InferenceEngine::ExecutableNetwork> mExecutableNetwork;
