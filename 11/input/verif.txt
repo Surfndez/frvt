@@ -6,3 +6,5 @@
 12 ../common/images/S002-01-t10_01.ppm MUGSHOT
 14 ../common/images/S004-01-t10_01.ppm MUGSHOT
 16 ../common/images/S006-01-t10_01.ppm MUGSHOT
+18 ../common/images/S006-03-t10_01.ppm MUGSHOT
+20 ../common/images/S008-01-t10_01.ppm MUGSHOT
