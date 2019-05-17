@@ -15,7 +15,6 @@
 
 #include "nullimplfrvt11.h"
 #include "../algo/SsdFaceDetector.h"
-//#include "../algo/FanLandmarksDetector.h"
 #include "../algo/DnetLandmarksDetector.h"
 #include "../algo/SphereFaceRecognizer.h"
 
