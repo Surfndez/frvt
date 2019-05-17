@@ -27,6 +27,7 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
     // Prepare image
 
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
+    //cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
     cv::resize(image, image, cv::Size(512, 512), 0, 0, cv::INTER_LINEAR);
 

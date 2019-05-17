@@ -15,7 +15,8 @@
 
 #include "nullimplfrvt11.h"
 #include "../algo/SsdFaceDetector.h"
-#include "../algo/FanLandmarksDetector.h"
+//#include "../algo/FanLandmarksDetector.h"
+#include "../algo/DnetLandmarksDetector.h"
 #include "../algo/SphereFaceRecognizer.h"
 
 using namespace std;
@@ -30,7 +31,7 @@ ReturnStatus
 NullImplFRVT11::initialize(const std::string &configDir)
 {
     mFaceDetector = std::make_shared<SsdFaceDetector>(configDir);
-    mLandmarksDetector = std::make_shared<FanLandmarksDetector>(configDir);
+    mLandmarksDetector = std::make_shared<DnetLandmarksDetector>(configDir);
     mFaceRecognizer = std::make_shared<SphereFaceRecognizer>(configDir);
 
     return ReturnStatus(ReturnCode::Success);
