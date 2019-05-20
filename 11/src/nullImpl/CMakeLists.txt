@@ -6,12 +6,12 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 
 find_package(OpenCV REQUIRED)
-find_package(InferenceEngine REQUIRED)
+#find_package(InferenceEngine REQUIRED)
 
 include_directories (
     ${CMAKE_CURRENT_SOURCE_DIR}/../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../common/src/include
-    ${InferenceEngine_INCLUDE_DIRS}
+#    ${InferenceEngine_INCLUDE_DIRS}
 )
 
 file(GLOB algo_src "../algo/*.cpp")
@@ -24,5 +24,5 @@ set_target_properties( tensorflow PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_S
 add_library (frvt_11_null_001 SHARED ${algo_src} nullimplfrvt11.cpp)
 
 target_link_libraries (frvt_11_null_001 ${OpenCV_LIBS})
-target_link_libraries (frvt_11_null_001 ${InferenceEngine_LIBRARIES})
 target_link_libraries (frvt_11_null_001 tensorflow)
+#target_link_libraries (frvt_11_null_001 ${InferenceEngine_LIBRARIES})
