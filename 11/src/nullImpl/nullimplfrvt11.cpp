@@ -10,6 +10,7 @@
 
 #include <cstring>
 #include <cstdlib>
+#include <stdlib.h>
 
 #include <opencv2/core.hpp>
 
@@ -17,6 +18,8 @@
 #include "../algo/SsdFaceDetector.h"
 #include "../algo/DnetLandmarksDetector.h"
 #include "../algo/SphereFaceRecognizer.h"
+
+#include "../algo/TimeMeasurement.h"
 
 using namespace std;
 using namespace FRVT;
@@ -29,9 +32,16 @@ NullImplFRVT11::~NullImplFRVT11() {}
 ReturnStatus
 NullImplFRVT11::initialize(const std::string &configDir)
 {
+    std::cout << "NullImplFRVT11::initialize START " << ValidateNumThreads() << std::endl;
+
+    putenv("OMP_NUM_THREADS=1");
+    cv::setNumThreads(0);
+
     mFaceDetector = std::make_shared<SsdFaceDetector>(configDir);
     mLandmarksDetector = std::make_shared<DnetLandmarksDetector>(configDir);
     mFaceRecognizer = std::make_shared<SphereFaceRecognizer>(configDir);
+
+    std::cout << "NullImplFRVT11::initialize END " << ValidateNumThreads() << std::endl;
 
     return ReturnStatus(ReturnCode::Success);
 }
@@ -43,6 +53,10 @@ NullImplFRVT11::createTemplate(
         std::vector<uint8_t> &templ,
         std::vector<EyePair> &eyeCoordinates)
 {
+    auto t = TimeMeasurement();
+
+    std::cout << "NullImplFRVT11::createTemplate START " << ValidateNumThreads() << std::endl;
+
     std::vector<std::vector<float>> templates;
 
     for(const Image &image: faces) {        
@@ -84,6 +98,10 @@ NullImplFRVT11::createTemplate(
     int dataSize = sizeof(float) * output_features.rows;
     templ.resize(dataSize);
     memcpy(templ.data(), bytes, dataSize);
+
+    std::cout << "Create template "; t.Test();
+
+    std::cout << "NullImplFRVT11::createTemplate END " << ValidateNumThreads() << std::endl;
 
     return ReturnStatus(ReturnCode::Success);
 }
