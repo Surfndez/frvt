@@ -4,11 +4,16 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include "../algo/TimeMeasurement.h"
+
 using namespace FRVT_11;
+
+std::string MODEL_NAME = "/ssd_resnet20_v1_320x320-100000";
+int SSD_INPUT_SIZE = 320;
 
 SsdFaceDetector::SsdFaceDetector(const std::string &configDir)
 {
-    std::string modelPath = configDir + "/ssd_resnet38-103424";
+    std::string modelPath = configDir + MODEL_NAME;
 
     mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(
         modelPath,
@@ -22,14 +27,18 @@ SsdFaceDetector::~SsdFaceDetector() {}
 std::vector<Rect>
 SsdFaceDetector::Detect(const ImageData &imageData) const
 {
-    std::cout << "SsdFaceDetector::Detect Start" << std::endl;
+    auto t = TimeMeasurement();
 
     // Prepare image
 
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
     //cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
-    cv::resize(image, image, cv::Size(512, 512), 0, 0, cv::INTER_LINEAR);
+    std::cout << "\tFace detection -> Create image "; t.Test();
+
+    cv::resize(image, image, cv::Size(SSD_INPUT_SIZE, SSD_INPUT_SIZE), 0, 0, cv::INTER_LINEAR);
+
+    std::cout << "\tFace detection -> Resize image "; t.Test();
 
     float ratioH = imageData.height / float(image.rows);
     float ratioW = imageData.width / float(image.cols);
@@ -37,6 +46,8 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
     // Perform inference
 
     auto output = mTensorFlowInference->Infer(image);
+
+    std::cout << "\tFace detection -> Inference "; t.Test();
 
     // Process output
 
@@ -50,8 +61,10 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
                 int(boxes[2] * image.rows * ratioH),
                 scores[0]);
 
-    std::cout << "top score:         " << rect.score << std::endl;
-    std::cout << "face bounding box: [" <<  rect.x1 << "," << rect.y1 << "," << rect.x2 << "," << rect.y2 << "]" << std::endl;
+    //std::cout << "top score:         " << rect.score << std::endl;
+    //std::cout << "face bounding box: [" <<  rect.x1 << "," << rect.y1 << "," << rect.x2 << "," << rect.y2 << "]" << std::endl;
+
+    std::cout << "\tFace detection -> Done "; t.Test();
 
     return {rect};
 }
