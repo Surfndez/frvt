@@ -3,19 +3,13 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "TimeMeasurement.h"
-
-extern "C"
-{
-    #include "c_api.h"
-}
+#include "c_api.h"
+#include "tf_utils.hpp"
 
 extern "C"
 {
 	struct TF_Tensor;
 }
-
-#include "tf_utils.hpp"
 
 using namespace FRVT_11;
 
@@ -23,9 +17,6 @@ TensorFlowInference::TensorFlowInference(const std::string &modelPath, std::init
     sess(nullptr), mInputLayers(inputLayers), mOutputLayers(outputLayers)
 {
     std::string path = modelPath + ".pb";
-
-    std::cout << "\nTensorFlow Version: " << TF_Version() << std::endl;
-    std::cout << "Creating TensorFlow inference for " << path << std::endl;
 
     graph = tf_utils::LoadGraph(path.c_str());
     if (graph == nullptr) {
@@ -41,6 +32,11 @@ TensorFlowInference::Init()
     {
         status = TF_NewStatus();
         options = TF_NewSessionOptions();
+
+        uint8_t config[4] = {0x10, 0x1, 0x28, 0x1};
+        TF_SetConfig(options, (void*)config, 4, status);
+        if (TF_GetCode(status) != TF_OK) std::runtime_error("Failed to set number of threads");
+
         sess = TF_NewSession(graph, options, status);
         TF_DeleteSessionOptions(options);
     }
@@ -82,8 +78,6 @@ TensorFlowInference::Infer(const cv::Mat& image)
     std::vector<TF_Tensor*> output_values(outputs.size());
 
     // Perform inference
-
-    auto t = TimeMeasurement();
     TF_SessionRun(sess,
                 nullptr, // Run options.
                 &input_op, &input_tensor, 1, // Input tensors, input tensor values, number of inputs.
@@ -98,8 +92,6 @@ TensorFlowInference::Infer(const cv::Mat& image)
         std::string errMsg(TF_Message(status));
         throw std::runtime_error("Error from TF_SessionRun: " + errMsg);
     }
-
-    std::cout << "TensorFlowInference::Infer "; t.Test();
 
     // Return result
 
