@@ -32,16 +32,13 @@ NullImplFRVT11::~NullImplFRVT11() {}
 ReturnStatus
 NullImplFRVT11::initialize(const std::string &configDir)
 {
-    std::cout << "NullImplFRVT11::initialize START " << ValidateNumThreads() << std::endl;
-
-    putenv("OMP_NUM_THREADS=1");
-    cv::setNumThreads(0);
+    putenv("TF_CPP_MIN_LOG_LEVEL=3"); // Disable TensorFlow logs
+    putenv("OMP_NUM_THREADS=1"); // Disable MKL muilti-threading
+    cv::setNumThreads(0); // Disable OpenCV use of TBB
 
     mFaceDetector = std::make_shared<SsdFaceDetector>(configDir);
     mLandmarksDetector = std::make_shared<DnetLandmarksDetector>(configDir);
     mFaceRecognizer = std::make_shared<SphereFaceRecognizer>(configDir);
-
-    std::cout << "NullImplFRVT11::initialize END " << ValidateNumThreads() << std::endl;
 
     return ReturnStatus(ReturnCode::Success);
 }
@@ -55,30 +52,30 @@ NullImplFRVT11::createTemplate(
 {
     auto t = TimeMeasurement();
 
-    std::cout << "NullImplFRVT11::createTemplate START " << ValidateNumThreads() << std::endl;
-
     std::vector<std::vector<float>> templates;
 
     for(const Image &image: faces) {        
         int channels = int(image.depth / 8);
         ImageData imageData(image.data, image.width, image.height, channels);
 
+        auto t1 = TimeMeasurement();
         std::vector<Rect> rects = mFaceDetector->Detect(imageData);
+        std::cout << "Face detection "; t1.Test();
 
         for (const Rect &rect : rects) {
             std::vector<int> landmarks = mLandmarksDetector->Detect(imageData, rect);
             
             eyeCoordinates.push_back(EyePair(true, true, landmarks[0], landmarks[1], landmarks[2], landmarks[3]));
 
+            auto t3 = TimeMeasurement();
             std::vector<float> features = mFaceRecognizer->Infer(imageData, landmarks);
+            std::cout << "Face recognition "; t3.Test();
 
             templates.push_back(features);
 
             break; // should be only one face in image
         }        
     }
-
-    //std::cout << "embeddings[:5] = " << templates[0][0] << "," << templates[0][1] << "," << templates[0][2] << std::endl;
 
     // average pool on features
     cv::Mat output_features = cv::Mat::zeros(512, 1, CV_32F);
@@ -100,8 +97,7 @@ NullImplFRVT11::createTemplate(
     memcpy(templ.data(), bytes, dataSize);
 
     std::cout << "Create template "; t.Test();
-
-    std::cout << "NullImplFRVT11::createTemplate END " << ValidateNumThreads() << std::endl;
+    std::cout << "Create template number of threads: " << ValidateNumThreads() << std::endl;
 
     return ReturnStatus(ReturnCode::Success);
 }
