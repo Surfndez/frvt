@@ -1,11 +1,14 @@
 #include "SphereFaceRecognizer.h"
 
 #include <algorithm>
-#include <inference_engine.hpp>
+#include <iostream>
+//#include <inference_engine.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
 #include <opencv2/highgui.hpp>
+
+#include "../algo/TimeMeasurement.h"
 
 using namespace FRVT_11;
 //using namespace InferenceEngine;
@@ -56,7 +59,7 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
     // resize
     cv::resize(gray, gray, cv::Size(128, 128), 0, 0, cv::INTER_LINEAR);
 
-    cv::imwrite("/home/administrator/nist/frvt/debug/fa_gray_128.png", gray);
+    //cv::imwrite("/home/administrator/nist/frvt/debug/fa_gray_128.png", gray);
 
     // normalized
     gray.convertTo(gray, CV_32FC1);
@@ -78,16 +81,20 @@ SphereFaceRecognizer::~SphereFaceRecognizer() {}
 std::vector<float>
 SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& landmarks) const
 {
-    std::cout << "Sphere inference... " << std::endl;
+    auto t = TimeMeasurement();
 
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
     
     image = NormalizeImage(image, landmarks);
 
+    //std::cout << "\tFace recognition -> Prepare input "; t.Test();
+
     //auto output = mModelInference->Infer(image);
     //const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
     auto output = mTensorFlowInference->Infer(image);
     float* output_features = static_cast<float*>(TF_TensorData(output[0].get()));
+
+    //std::cout << "\tFace recognition -> Inference "; t.Test();
 
     //std::cout << "features[:5] = " << output_features[0] << "," << output_features[1] << "," << output_features[2] << "," << output_features[3] << "," << output_features[4] << std::endl;
 
@@ -103,7 +110,7 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
         features[i] = featuresMat.at<float>(i, 0);
     }
 
-    std::cout << "Done!" << std::endl;
+    //std::cout << "\tFace recognition -> Done "; t.Test();
 
     return features;
 }
