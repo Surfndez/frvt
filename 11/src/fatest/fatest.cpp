@@ -17,7 +17,7 @@ using namespace FRVT_11;
 
 class ProgressBarPrinter {
 public:
-    ProgressBarPrinter(int total_items) : init_time(true), total_items(total_items) {}
+    ProgressBarPrinter(int total_items, int images_per_item) : init_time(true), total_items(total_items), images_per_item(images_per_item) {}
     
     void Print(int progress)
     {
@@ -33,7 +33,7 @@ public:
                 init_time = false;
             }
 
-            int items_finished = int(progress / 3);
+            int items_finished = int(progress / (images_per_item + 1));
             int percentage_finished = int(items_finished / float(total_items) * 100);
 
             auto finish = std::chrono::high_resolution_clock::now();
@@ -54,6 +54,7 @@ public:
                 << percentage_finished << "% | " << items_finished << "/" << total_items
                 << " | Remaining time: " << minutes_remaining << ":" << (seconds_remaining < 10 ? "0" : "") << seconds_remaining
                 << " | Time per item: " << time_per_item
+                << " | Time per image: " << time_per_item / double(images_per_item)
                 << "\r" << std::flush;
         }
     }
@@ -64,6 +65,7 @@ private:
     bool init_time;
     int total_items;
     std::vector<double> times_per_item;
+    int images_per_item;
 };
 
 void
@@ -81,38 +83,6 @@ CvImageToImageData(const cv::Mat& image)
     Image imageData((uint16_t)image.cols, (uint16_t)image.rows, (uint8_t)24, imageArray, Image::Label::Unknown);
     
     return imageData;
-}
-
-void
-SanityCheck()
-{
-    std::cout << "Strating sanity check..." << std::endl;
-
-    cv::Mat image = cv::imread("/home/administrator/nist/frvt/common/images/S486-02-t10_01.ppm");
-    if(!image.data) throw std::runtime_error("Could not open or find the image");
-
-    std::cout << "Read image successfully" << std::endl;
-
-    auto implPtr = Interface::getImplementation();
-
-    std::cout << "Created fvrt interface" << std::endl;
-
-    InitializeImplementation(implPtr);
-
-    std::cout << "Initialized implementation" << std::endl;
-
-    std::shared_ptr<uint8_t> imageArray(new uint8_t[3 * image.rows * image.cols]);
-    std::memcpy(imageArray.get(), image.data, 3 * image.rows * image.cols);
-
-    Image imageData = CvImageToImageData(image);
-    FRVT::Multiface faces = {imageData};
-
-    std::vector<uint8_t> templ;
-    std::vector<EyePair> eyeCoordinates;
-
-    implPtr->createTemplate(faces, TemplateRole::Enrollment_11, templ, eyeCoordinates);
-
-    std::cout << "Sanity test done!\n" << std::endl;
 }
 
 double
@@ -134,13 +104,37 @@ CalculateTPR(double fpr_divider, std::vector<double>& diff_scores, std::vector<d
     return tp / same_scores.size();
 }
 
+std::vector<uint8_t>
+GetTemplate(std::shared_ptr<Interface>& implPtr, std::vector<std::string> files)
+{
+    std::vector<Image> images;
+    for (const std::string& file : files) {
+        auto path = "/home/administrator/face_data/benchmarks/original/" + file;
+        cv::Mat image = cv::imread(path);
+        if(!image.data) throw std::runtime_error("Could not open or find the image");
+        Image imageData = CvImageToImageData(image);
+        images.push_back(imageData);
+    }
+    
+    std::vector<uint8_t> features;
+    std::vector<EyePair> eyeCoordinates;
+
+    implPtr->createTemplate(images, TemplateRole::Enrollment_11, features, eyeCoordinates);
+
+    return features;
+}
+
 void
-RunVggTest()
+RunVggTest(const std::string& list_path)
 {
     // Read test list
-    std::ifstream is("/home/administrator/face_data/benchmarks/vgg_test_pairs.txt");
+    std::ifstream is(list_path);
     std::istream_iterator<std::string> start(is), end;
     std::vector<std::string> testList(start, end);
+
+    int gallery_size = std::stoi(testList[0]);
+    int pair_size = gallery_size * 2 + 1;
+    std::cout << "Found gallery size: " << gallery_size << std::endl;
 
     // Create FRVT implementation
     auto implPtr = Interface::getImplementation();
@@ -151,34 +145,21 @@ RunVggTest()
     std::vector<double> same_scores;
     std::vector<double> diff_scores;
 
-    int total_items = int((testList.size() - 2) / 3);
+    int total_items = int((testList.size() - 1) / pair_size);
 
-    ProgressBarPrinter progress_bar(total_items);
+    ProgressBarPrinter progress_bar(total_items, gallery_size * 2);
 
-    for (int i = 2, progress = 0; i < testList.size(); i = i + 3, progress = progress + 3)
+    for (int i = 1, progress = 0; i < testList.size(); i = i + pair_size, progress = progress + pair_size)
     {
         progress_bar.Print(progress);
 
-        auto path1 = "/home/administrator/face_data/benchmarks/original/" + testList[i];
-        auto path2 = "/home/administrator/face_data/benchmarks/original/" + testList[i + 1];
-        auto isSame = testList[i + 2] == "1";
+        std::vector<std::string> files1(testList.begin() + i, testList.begin() + i + gallery_size);
+        std::vector<std::string> files2(testList.begin() + i + gallery_size, testList.begin() + i + gallery_size * 2);
 
-        //std::cout << path1 << std::endl;
-        cv::Mat image1 = cv::imread(path1);
-        //std::cout << path2 << std::endl;
-        cv::Mat image2 = cv::imread(path2);
-        if(!image1.data || !image2.data) throw std::runtime_error("Could not open or find the image");
+        std::vector<uint8_t> features1 = GetTemplate(implPtr, files1);
+        std::vector<uint8_t> features2 = GetTemplate(implPtr, files2);
 
-        Image imageData1 = CvImageToImageData(image1);
-        Image imageData2 = CvImageToImageData(image2);
-
-        std::vector<uint8_t> features1;
-        std::vector<uint8_t> features2;
-        std::vector<EyePair> eyeCoordinates1;
-        std::vector<EyePair> eyeCoordinates2;
-
-        implPtr->createTemplate({imageData1}, TemplateRole::Enrollment_11, features1, eyeCoordinates1);
-        implPtr->createTemplate({imageData2}, TemplateRole::Enrollment_11, features2, eyeCoordinates2);
+        auto isSame = testList[i + gallery_size * 2] == "1";
 
         double score = 0;
         implPtr->matchTemplates(features1, features2, score);
@@ -198,7 +179,14 @@ RunVggTest()
 int
 main(int argc, char* argv[])
 {
-    //SanityCheck();
-    RunVggTest();
+    if (argc == 1) {
+        std::cout << "Need test list path" << std::endl;
+    }
+    std::string listPath = argv[1];
+
+    std::cout << "List path: " << listPath << std::endl;
+    
+    RunVggTest(listPath);
+
 	return 0;
 }
