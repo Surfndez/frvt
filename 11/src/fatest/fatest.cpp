@@ -10,9 +10,20 @@
 #include "frvt11.h"
 #include "util.h"
 
+#include "../algo/TimeMeasurement.h"
+
 using namespace FRVT;
 using namespace FRVT_11;
 
+double
+CalculateRemainingTime(std::chrono::time_point<std::chrono::high_resolution_clock>& start_time, int num_finished, int total_items)
+{
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = finish - start_time;
+    double passed_time = elapsed.count();
+    double time_per_item = passed_time / num_finished;
+    return time_per_item * (total_items - num_finished);
+}
 
 void
 InitializeImplementation(std::shared_ptr<Interface>& implPtr)
@@ -30,7 +41,6 @@ CvImageToImageData(const cv::Mat& image)
     
     return imageData;
 }
-
 
 void
 SanityCheck()
@@ -74,7 +84,7 @@ CalculateTPR(double fpr_divider, std::vector<double>& diff_scores, std::vector<d
 
     std::cout << "Border score: " << borderScore << " (at index " << borderIndex << ")" << std::endl;
 
-    int tp = 0;
+    double tp = 0;
     for (int i = 0; i < same_scores.size(); ++i)
     {
         if (same_scores[i] > borderScore) ++tp;
@@ -87,7 +97,7 @@ void
 RunVggTest()
 {
     // Read test list
-    std::ifstream is("/home/administrator/face_data/benchmarks/vgg_test_pairs_halffold.txt");
+    std::ifstream is("/home/administrator/face_data/benchmarks/vgg_test_pairs.txt");
     std::istream_iterator<std::string> start(is), end;
     std::vector<std::string> testList(start, end);
 
@@ -103,11 +113,20 @@ RunVggTest()
     std::vector<double> same_scores;
     std::vector<double> diff_scores;
 
+    auto start_time = std::chrono::high_resolution_clock::now();
+    int total_items = int((testList.size() - 2) / 3);
+
     for (int i = 2, progress = 0; i < testList.size(); i = i + 3, progress = progress + 3)
     {
-        if (progress % 10 == 0)
+        if (progress == 0)
         {
-            std::cout << "Progress: " << int(progress / 3) << "/" << int((testList.size() - 2) / 3) << std::endl;
+            std::cout << "Progress: 0/" << total_items << std::endl;
+        }
+        else if (progress % 10 == 0)
+        {
+            int items_finised = int(progress / 3);
+            auto time_remaining = CalculateRemainingTime(start_time, items_finised, total_items);
+            std::cout << "Progress: " << items_finised << "/" << total_items << " (Remaining time: " << time_remaining << "s)" << std::endl;
         }
 
         auto path1 = "/home/administrator/face_data/benchmarks/original/" + testList[i];
@@ -132,12 +151,15 @@ RunVggTest()
 
         if (isSame) same_scores.push_back(score);
         else diff_scores.push_back(score);
+
+        if (progress == 0) start_time = std::chrono::high_resolution_clock::now(); //this is to not count the first inference when sesssions are created
     }
 
     // Output TPR
 
     std::cout << "TPR @ FPR 1:" << 10 << " = " << CalculateTPR(10, diff_scores, same_scores) << std::endl;
     std::cout << "TPR @ FPR 1:" << 100 << " = " << CalculateTPR(100, diff_scores, same_scores) << std::endl;
+    std::cout << "TPR @ FPR 1:" << 1000 << " = " << CalculateTPR(1000, diff_scores, same_scores) << std::endl;
 }
 
 int
