@@ -45,6 +45,13 @@ public:
     static std::shared_ptr<FRVT_11::Interface>
     getImplementation();
 
+    FRVT::ReturnStatus
+    safeCreateTemplate(
+            const FRVT::Multiface &faces,
+            FRVT::TemplateRole role,
+            std::vector<uint8_t> &templ,
+            std::vector<FRVT::EyePair> &eyeCoordinates);
+
 private:
     std::string configDir;
     static const int featureVectorSize{4};
