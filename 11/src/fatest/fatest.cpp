@@ -12,8 +12,6 @@
 #include "frvt11.h"
 #include "util.h"
 
-#include "../algo/TimeMeasurement.h"
-
 using namespace FRVT;
 using namespace FRVT_11;
 
