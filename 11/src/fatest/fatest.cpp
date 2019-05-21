@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <fstream>
 #include <iterator>
+#include <algorithm>
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -63,11 +64,30 @@ SanityCheck()
     std::cout << "Sanity test done!\n" << std::endl;
 }
 
+double
+CalculateTPR(double fpr_divider, std::vector<double>& diff_scores, std::vector<double>& same_scores)
+{
+    std::sort(diff_scores.begin(), diff_scores.end());
+    std::reverse(diff_scores.begin(), diff_scores.end());
+    int borderIndex = int(diff_scores.size() / fpr_divider);
+    double borderScore = diff_scores[borderIndex];
+
+    std::cout << "Border score: " << borderScore << " (at index " << borderIndex << ")" << std::endl;
+
+    int tp = 0;
+    for (int i = 0; i < same_scores.size(); ++i)
+    {
+        if (same_scores[i] > borderScore) ++tp;
+    }
+
+    return tp / same_scores.size();
+}
+
 void
 RunVggTest()
 {
     // Read test list
-    std::ifstream is("/home/administrator/face_data/benchmarks/vgg_test_pairs_sanity.txt");
+    std::ifstream is("/home/administrator/face_data/benchmarks/vgg_test_pairs_halffold.txt");
     std::istream_iterator<std::string> start(is), end;
     std::vector<std::string> testList(start, end);
 
@@ -75,20 +95,24 @@ RunVggTest()
     auto implPtr = Interface::getImplementation();
     InitializeImplementation(implPtr);
 
-    // Struct that are needed by the interface...
+    // Struct that is needed by the interface...
     std::vector<EyePair> eyeCoordinates;
 
-    //Loop over pairs
+    // Loop over pairs
+
+    std::vector<double> same_scores;
+    std::vector<double> diff_scores;
+
     for (int i = 2, progress = 0; i < testList.size(); i = i + 3, progress = progress + 3)
     {
-        if (progress % 100 == 0)
+        if (progress % 10 == 0)
         {
-            std::cout << "Progress: " << progress << "/" << testList.size() - 2 << std::endl;
+            std::cout << "Progress: " << int(progress / 3) << "/" << int((testList.size() - 2) / 3) << std::endl;
         }
 
-        auto path1 = "/home/administrator/face_data/benchmarks/Normalized/BoundingBox/vggface2/" + testList[i];
-        auto path2 = "/home/administrator/face_data/benchmarks/Normalized/BoundingBox/vggface2/" + testList[i + 1];
-        auto isSame = testList[i + 1] == "1";
+        auto path1 = "/home/administrator/face_data/benchmarks/original/" + testList[i];
+        auto path2 = "/home/administrator/face_data/benchmarks/original/" + testList[i + 1];
+        auto isSame = testList[i + 2] == "1";
 
         cv::Mat image1 = cv::imread(path1);
         cv::Mat image2 = cv::imread(path2);
@@ -106,8 +130,14 @@ RunVggTest()
         double score = 0;
         implPtr->matchTemplates(features1, features2, score);
 
-        std::cout << score << std::endl;
+        if (isSame) same_scores.push_back(score);
+        else diff_scores.push_back(score);
     }
+
+    // Output TPR
+
+    std::cout << "TPR @ FPR 1:" << 10 << " = " << CalculateTPR(10, diff_scores, same_scores) << std::endl;
+    std::cout << "TPR @ FPR 1:" << 100 << " = " << CalculateTPR(100, diff_scores, same_scores) << std::endl;
 }
 
 int
