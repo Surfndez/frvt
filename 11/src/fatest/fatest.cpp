@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iterator>
 #include <algorithm>
+#include <iomanip>
+#include <numeric>
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -15,15 +17,56 @@
 using namespace FRVT;
 using namespace FRVT_11;
 
-double
-CalculateRemainingTime(std::chrono::time_point<std::chrono::high_resolution_clock>& start_time, int num_finished, int total_items)
-{
-    auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = finish - start_time;
-    double passed_time = elapsed.count();
-    double time_per_item = passed_time / num_finished;
-    return time_per_item * (total_items - num_finished);
-}
+class ProgressBarPrinter {
+public:
+    ProgressBarPrinter(int total_items) : init_time(true), total_items(total_items) {}
+    
+    void Print(int progress)
+    {
+        if (progress == 0)
+        {
+            std::cout << "Progress: 0% | 0/" << total_items << "\r" << std::flush;
+        }
+        else
+        {
+            if (init_time) // this is here so first inference and session creations are not calculated
+            {
+                start_time = std::chrono::high_resolution_clock::now();
+                init_time = false;
+            }
+
+            int items_finished = int(progress / 3);
+            int percentage_finished = int(items_finished / total_items * 100);
+
+            auto finish = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> elapsed = finish - start_time;
+            double passed_time = elapsed.count();
+            
+            double time_per_item = passed_time / items_finished;
+            times_per_item.push_back(time_per_item);
+            if (times_per_item.size() > 20) times_per_item.erase(times_per_item.begin());
+            time_per_item = std::accumulate(times_per_item.begin(), times_per_item.end(), 0.0) / times_per_item.size();
+            
+            double time_remaining = time_per_item * (total_items - items_finished);
+            int minutes_remaining = int(time_remaining / 60);
+            int seconds_remaining = int(time_remaining) % 60;
+
+            std::cout
+                << "Progress: "
+                << percentage_finished << "% | " << items_finished << "/" << total_items
+                << " | Remaining time: " << minutes_remaining << ":" << (seconds_remaining < 10 ? "0" : "") << seconds_remaining
+                << " | Time per item: " << time_per_item
+                << "\r" << std::flush;
+        }
+    }
+
+private:
+    using Time = std::chrono::time_point<std::chrono::high_resolution_clock>;
+    Time start_time;
+    bool init_time;
+    int total_items;
+    std::vector<double> times_per_item;
+};
 
 void
 InitializeImplementation(std::shared_ptr<Interface>& implPtr)
@@ -105,35 +148,26 @@ RunVggTest()
     auto implPtr = Interface::getImplementation();
     InitializeImplementation(implPtr);
 
-    // Struct that is needed by the interface...
-    std::vector<EyePair> eyeCoordinates;
-
     // Loop over pairs
 
     std::vector<double> same_scores;
     std::vector<double> diff_scores;
 
-    auto start_time = std::chrono::high_resolution_clock::now();
     int total_items = int((testList.size() - 2) / 3);
+
+    ProgressBarPrinter progress_bar(total_items);
 
     for (int i = 2, progress = 0; i < testList.size(); i = i + 3, progress = progress + 3)
     {
-        if (progress == 0)
-        {
-            std::cout << "Progress: 0/" << total_items << std::endl;
-        }
-        else if (progress % 10 == 0)
-        {
-            int items_finised = int(progress / 3);
-            auto time_remaining = CalculateRemainingTime(start_time, items_finised, total_items);
-            std::cout << "Progress: " << items_finised << "/" << total_items << " (Remaining time: " << time_remaining << "s)" << std::endl;
-        }
+        progress_bar.Print(progress);
 
         auto path1 = "/home/administrator/face_data/benchmarks/original/" + testList[i];
         auto path2 = "/home/administrator/face_data/benchmarks/original/" + testList[i + 1];
         auto isSame = testList[i + 2] == "1";
 
+        //std::cout << path1 << std::endl;
         cv::Mat image1 = cv::imread(path1);
+        //std::cout << path2 << std::endl;
         cv::Mat image2 = cv::imread(path2);
         if(!image1.data || !image2.data) throw std::runtime_error("Could not open or find the image");
 
@@ -142,21 +176,22 @@ RunVggTest()
 
         std::vector<uint8_t> features1;
         std::vector<uint8_t> features2;
+        std::vector<EyePair> eyeCoordinates1;
+        std::vector<EyePair> eyeCoordinates2;
 
-        implPtr->createTemplate({imageData1}, TemplateRole::Enrollment_11, features1, eyeCoordinates);
-        implPtr->createTemplate({imageData2}, TemplateRole::Enrollment_11, features2, eyeCoordinates);
+        implPtr->createTemplate({imageData1}, TemplateRole::Enrollment_11, features1, eyeCoordinates1);
+        implPtr->createTemplate({imageData2}, TemplateRole::Enrollment_11, features2, eyeCoordinates2);
 
         double score = 0;
         implPtr->matchTemplates(features1, features2, score);
 
         if (isSame) same_scores.push_back(score);
         else diff_scores.push_back(score);
-
-        if (progress == 0) start_time = std::chrono::high_resolution_clock::now(); //this is to not count the first inference when sesssions are created
     }
 
     // Output TPR
 
+    std::cout << std::endl;
     std::cout << "TPR @ FPR 1:" << 10 << " = " << CalculateTPR(10, diff_scores, same_scores) << std::endl;
     std::cout << "TPR @ FPR 1:" << 100 << " = " << CalculateTPR(100, diff_scores, same_scores) << std::endl;
     std::cout << "TPR @ FPR 1:" << 1000 << " = " << CalculateTPR(1000, diff_scores, same_scores) << std::endl;
