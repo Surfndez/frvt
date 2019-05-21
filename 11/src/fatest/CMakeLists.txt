@@ -1,12 +1,22 @@
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -DNIST_EXTERN_FRVT_STRUCTS_VERSION -DNIST_EXTERN_API_VERSION")
-include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../include ${CMAKE_CURRENT_SOURCE_DIR}/../../../common/src/include)
+cmake_minimum_required(VERSION 2.8)
 
-# Configure to put executable in top level bin directory
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-# Get library implementation name
-set (FRVT_IMPL_LIB $ENV{FRVT_IMPL_LIB})
+find_package(OpenCV REQUIRED)
 
-# Build executable link to dependent libraries
-add_executable (validate11 ../../../common/src/util/util.cpp validate11.cpp)
-target_link_libraries (validate11 ${FRVT_IMPL_LIB})
+include_directories (
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../common/src/include
+)
+
+file(GLOB test_src "*.cpp")
+
+# FRVT lib
+add_library( frvt SHARED IMPORTED PUBLIC )
+set_target_properties( frvt PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/libfrvt_11_null_001.so )
+
+# Build the executable
+add_executable (fa_test ${test_src})
+
+target_link_libraries (fa_test ${OpenCV_LIBS})
+target_link_libraries (fa_test frvt)
