@@ -36,7 +36,7 @@ public:
             }
 
             int items_finished = int(progress / 3);
-            int percentage_finished = int(items_finished / total_items * 100);
+            int percentage_finished = int(items_finished / float(total_items) * 100);
 
             auto finish = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed = finish - start_time;
