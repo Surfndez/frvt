@@ -17,7 +17,8 @@ using namespace FRVT_11;
 
 class ProgressBarPrinter {
 public:
-    ProgressBarPrinter(int total_items, int images_per_item) : init_time(true), total_items(total_items), images_per_item(images_per_item) {}
+    ProgressBarPrinter(int total_items, int images_per_item) :
+        total_items(total_items), images_per_item(images_per_item), start_time(std::chrono::high_resolution_clock::now()) {}
     
     void Print(int progress)
     {
@@ -27,12 +28,6 @@ public:
         }
         else
         {
-            if (init_time) // this is here so first inference and session creations are not calculated
-            {
-                start_time = std::chrono::high_resolution_clock::now();
-                init_time = false;
-            }
-
             int items_finished = int(progress / (images_per_item + 1));
             int percentage_finished = int(items_finished / float(total_items) * 100);
 
@@ -59,10 +54,14 @@ public:
         }
     }
 
+    void RestartTime()
+    {
+        start_time = std::chrono::high_resolution_clock::now();
+    }
+
 private:
     using Time = std::chrono::time_point<std::chrono::high_resolution_clock>;
     Time start_time;
-    bool init_time;
     int total_items;
     std::vector<double> times_per_item;
     int images_per_item;
@@ -151,7 +150,7 @@ RunVggTest(const std::string& list_path)
 
     for (int i = 1, progress = 0; i < testList.size(); i = i + pair_size, progress = progress + pair_size)
     {
-        progress_bar.Print(progress);
+        if (progress == 0) progress_bar.Print(progress);
 
         std::vector<std::string> files1(testList.begin() + i, testList.begin() + i + gallery_size);
         std::vector<std::string> files2(testList.begin() + i + gallery_size, testList.begin() + i + gallery_size * 2);
@@ -166,6 +165,9 @@ RunVggTest(const std::string& list_path)
 
         if (isSame) same_scores.push_back(score);
         else diff_scores.push_back(score);
+
+        if (progress == 0) progress_bar.RestartTime();
+        if (progress > 0) progress_bar.Print(progress);
     }
 
     // Output TPR
