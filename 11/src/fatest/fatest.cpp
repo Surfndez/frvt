@@ -11,6 +11,7 @@
 
 #include "frvt11.h"
 #include "util.h"
+#include "TestUtils.h"
 
 using namespace FRVT;
 using namespace FRVT_11;
@@ -126,10 +127,7 @@ GetTemplate(std::shared_ptr<Interface>& implPtr, std::vector<std::string> files)
 void
 RunVggTest(const std::string& list_path)
 {
-    // Read test list
-    std::ifstream is(list_path);
-    std::istream_iterator<std::string> start(is), end;
-    std::vector<std::string> testList(start, end);
+    std::vector<std::string> testList = ReadTestList(list_path);
 
     int gallery_size = std::stoi(testList[0]);
     int pair_size = gallery_size * 2 + 1;
