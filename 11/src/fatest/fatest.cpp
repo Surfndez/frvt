@@ -1,10 +1,10 @@
 #include <iostream>
 #include <stdexcept>
-#include <fstream>
-#include <iterator>
+
 #include <algorithm>
 #include <iomanip>
 #include <numeric>
+#include <cstdlib>
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -104,8 +104,33 @@ CalculateTPR(double fpr_divider, std::vector<double>& diff_scores, std::vector<d
     return tp / same_scores.size();
 }
 
+void
+CalculateLandmarksAccuracy(std::map<std::string, std::vector<int>>& landmarksList, std::map<std::string, std::vector<int>>& landmarksDetection)
+{
+    std::cout << "Calculating landmarks detections over " << landmarksDetection.size() << " images... ";
+    std::vector<double> diffs;
+    for (const auto& kv : landmarksDetection) {
+        auto file = kv.first;
+        auto landmarksDetected = kv.second;
+        auto landmarksGT = landmarksList[file];
+        double diff = 
+            std::sqrt(std::pow(landmarksDetected[0] - landmarksGT[0], 2) + std::pow(landmarksDetected[1] - landmarksGT[1], 2)) +
+            std::sqrt(std::pow(landmarksDetected[2] - landmarksGT[2], 2) + std::pow(landmarksDetected[3] - landmarksGT[3], 2)) ; 
+        diff /= 2.0;
+        diffs.push_back(diff);
+    }
+
+    auto maxDiff = *std::max_element(diffs.begin(), diffs.end());
+
+    //cv::Mat testMat = cv::Mat(diffs);
+    cv::Scalar mean, stddev;
+    cv::meanStdDev(diffs, mean, stddev);
+
+    std::cout << "Landmarks error: " << mean[0] << " +- " << stddev[0] << " (max: " << maxDiff << ")" << std::endl;
+}
+
 std::vector<uint8_t>
-GetTemplate(std::shared_ptr<Interface>& implPtr, std::vector<std::string> files)
+GetTemplate(std::shared_ptr<Interface>& implPtr, std::vector<std::string> files, std::map<std::string, std::vector<int>>& landmarksDetection)
 {
     std::vector<Image> images;
     for (const std::string& file : files) {
@@ -121,19 +146,34 @@ GetTemplate(std::shared_ptr<Interface>& implPtr, std::vector<std::string> files)
 
     implPtr->createTemplate(images, TemplateRole::Enrollment_11, features, eyeCoordinates);
 
+    if (files.size() == eyeCoordinates.size()) {
+        for (int i = 0; i < files.size(); ++i) {
+            EyePair eyePair = eyeCoordinates[i];
+            landmarksDetection[files[i]] = {int(eyePair.xleft), int(eyePair.yleft), int(eyePair.xright), int(eyePair.yright)};
+        }
+    }
+
     return features;
 }
 
 void
-RunVggTest(const std::string& list_path)
+RunVggTest(const std::string& list_path, const std::string& landmarks_list_path)
 {
-    std::vector<std::string> testList = ReadTestList(list_path);
+    // Load test list
 
+    std::vector<std::string> testList = ReadTestList(list_path);
     int gallery_size = std::stoi(testList[0]);
     int pair_size = gallery_size * 2 + 1;
     std::cout << "Found gallery size: " << gallery_size << std::endl;
 
+    // Load landmarks data
+
+    std::map<std::string, std::vector<int>> landmarksList = ReadLandmarksList(landmarks_list_path);
+    std::map<std::string, std::vector<int>> landmarksDetection;
+    std::cout << "Loaded landmarks for " << landmarksList.size() << " images" << std::endl;
+
     // Create FRVT implementation
+
     auto implPtr = Interface::getImplementation();
     InitializeImplementation(implPtr);
 
@@ -153,8 +193,8 @@ RunVggTest(const std::string& list_path)
         std::vector<std::string> files1(testList.begin() + i, testList.begin() + i + gallery_size);
         std::vector<std::string> files2(testList.begin() + i + gallery_size, testList.begin() + i + gallery_size * 2);
 
-        std::vector<uint8_t> features1 = GetTemplate(implPtr, files1);
-        std::vector<uint8_t> features2 = GetTemplate(implPtr, files2);
+        std::vector<uint8_t> features1 = GetTemplate(implPtr, files1, landmarksDetection);
+        std::vector<uint8_t> features2 = GetTemplate(implPtr, files2, landmarksDetection);
 
         auto isSame = testList[i + gallery_size * 2] == "1";
 
@@ -174,6 +214,10 @@ RunVggTest(const std::string& list_path)
     std::cout << "TPR @ FPR 1:" << 10 << " = " << CalculateTPR(10, diff_scores, same_scores) << std::endl;
     std::cout << "TPR @ FPR 1:" << 100 << " = " << CalculateTPR(100, diff_scores, same_scores) << std::endl;
     std::cout << "TPR @ FPR 1:" << 1000 << " = " << CalculateTPR(1000, diff_scores, same_scores) << std::endl;
+
+    // Landmarks accuracy
+
+    CalculateLandmarksAccuracy(landmarksList, landmarksDetection);
 }
 
 int
@@ -185,8 +229,10 @@ main(int argc, char* argv[])
     std::string listPath = argv[1];
 
     std::cout << "List path: " << listPath << std::endl;
+
+    std::string landmarksListPath = "/home/administrator/face_data/benchmarks/vgg_landmarks.txt";
     
-    RunVggTest(listPath);
+    RunVggTest(listPath, landmarksListPath);
 
 	return 0;
 }

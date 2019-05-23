@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 std::vector<std::string> ReadTestList(const std::string& list_path);
 

@@ -1,5 +1,8 @@
 #include "TestUtils.h"
 
+#include <fstream>
+#include <iterator>
+
 std::vector<std::string>
 ReadTestList(const std::string& list_path)
 {
@@ -20,14 +23,16 @@ ReadTestList(const std::string& list_path)
 
     for (int i = 0; i < landmarks_list.size(); i = i + 11)
     {
-        auto key = landmarks_list[i]
+        auto key = landmarks_list[i];
         
         std::vector<int> landmarks;
-        for (int j = 0; j < 10; ++j)
+        for (int j = 1; j < 11; ++j)
         {
             landmarks.push_back(std::stoi(landmarks_list[i + j]));
         }
 
         landmarks_map[key] = landmarks;
     }
+
+    return landmarks_map;
  }
