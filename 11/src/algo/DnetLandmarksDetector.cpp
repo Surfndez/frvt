@@ -8,7 +8,7 @@
 
 using namespace FRVT_11;
 
-std::string MODEL_NAME = "/dnet_tffd_003";
+std::string DNET_MODEL_NAME = "/dnet_tffd_003";
 int INPUT_SIZE = 64;
 
 struct ImageCrop
@@ -143,7 +143,7 @@ AdjustLandmarks(const ImageCrop& imageCrop, const float* landmarks)
 
 DnetLandmarksDetector::DnetLandmarksDetector(const std::string &configDir)
 {
-    std::string modelPath = configDir + MODEL_NAME;
+    std::string modelPath = configDir + DNET_MODEL_NAME;
 
     mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(
         modelPath, {"d_net_input"}, {"lm_output/BiasAdd"})
