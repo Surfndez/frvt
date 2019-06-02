@@ -8,7 +8,7 @@
 
 using namespace FRVT_11;
 
-std::string DNET_MODEL_NAME = "/dnet_tffd_003";
+std::string DNET_MODEL_NAME = "/dnet_tffd_004";
 int INPUT_SIZE = 64;
 
 struct ImageCrop

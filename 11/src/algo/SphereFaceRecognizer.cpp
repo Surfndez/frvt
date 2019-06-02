@@ -71,7 +71,7 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
 
 SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
-    std::string sphereModelPath = configDir + "/fa_84_61-825000"; // sphereface-sphereface_84_cosineface_nist_bbox_61-825000_features
+    std::string sphereModelPath = configDir + "/fa_108_1-625000"; // sphereface-sphereface_108_cosineface_nist_bbox_1-625000
     mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(sphereModelPath, {"input"}, {"output_features"}));
     //mModelInference = std::make_shared<OpenVinoInference>(sphereModelPath);
 }
@@ -100,7 +100,7 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
 
     // normalize vector
     cv::Mat featuresMat(512, 1, CV_32F, output_features);
-    featuresMat /= cv::norm(featuresMat);
+    //featuresMat /= cv::norm(featuresMat);
 
     //std::cout << "embeddings[:5] = " << featuresMat.at<float>(0, 0) << "," << featuresMat.at<float>(1, 0) << "," << featuresMat.at<float>(2, 0) << "," << featuresMat.at<float>(3, 0) << "," << featuresMat.at<float>(4, 0) << std::endl;
 
