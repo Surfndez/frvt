@@ -225,6 +225,7 @@ main(int argc, char* argv[])
 {
     if (argc == 1) {
         std::cout << "Need test list path" << std::endl;
+        return 1;
     }
     std::string listPath = argv[1];
 
