@@ -1,10 +1,10 @@
 #include <iostream>
 #include <stdexcept>
-
 #include <algorithm>
 #include <iomanip>
 #include <numeric>
 #include <cstdlib>
+#include <fstream>
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -12,60 +12,42 @@
 #include "frvt11.h"
 #include "util.h"
 #include "TestUtils.h"
+#include "ProgressBar.h"
 
 using namespace FRVT;
 using namespace FRVT_11;
 
-class ProgressBarPrinter {
+class TestIterator {
 public:
-    ProgressBarPrinter(int total_items, int images_per_item) :
-        total_items(total_items), images_per_item(images_per_item), start_time(std::chrono::high_resolution_clock::now()) {}
-    
-    void Print(int progress)
+    TestIterator(const std::string& list_path)
     {
-        if (progress == 0)
-        {
-            std::cout << "Progress: 0% | 0/" << total_items << "\r" << std::flush;
-        }
-        else
-        {
-            int items_finished = int(progress / (images_per_item + 1));
-            int percentage_finished = int(items_finished / float(total_items) * 100);
+        testList = ReadTestList(list_path);
+        gallery_size = std::stoi(testList[0]);
+        pair_size = gallery_size * 2 + 1;
+        total_items = int((testList.size() - 1) / pair_size);
+        std::cout << "Found gallery size: " << gallery_size << std::endl;
+    }
 
-            auto finish = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> elapsed = finish - start_time;
-            double passed_time = elapsed.count();
-            
-            double time_per_item = passed_time / items_finished;
-            times_per_item.push_back(time_per_item);
-            if (times_per_item.size() > 20) times_per_item.erase(times_per_item.begin());
-            time_per_item = std::accumulate(times_per_item.begin(), times_per_item.end(), 0.0) / times_per_item.size();
-            
-            double time_remaining = time_per_item * (total_items - items_finished);
-            int minutes_remaining = int(time_remaining / 60);
-            int seconds_remaining = int(time_remaining) % 60;
+    template<typename Functor>
+    void Loop(Functor functor) const
+    {
+        for (int i = 1, progress = 0; i < testList.size(); i = i + pair_size, progress = progress + pair_size)
+        {
+            std::vector<std::string> files1(testList.begin() + i, testList.begin() + i + gallery_size);
+            std::vector<std::string> files2(testList.begin() + i + gallery_size, testList.begin() + i + gallery_size * 2);
 
-            std::cout
-                << "Progress: "
-                << percentage_finished << "% | " << items_finished << "/" << total_items
-                << " | Remaining time: " << minutes_remaining << ":" << (seconds_remaining < 10 ? "0" : "") << seconds_remaining
-                << " | Time per item: " << time_per_item
-                << " | Time per image: " << time_per_item / double(images_per_item)
-                << "\r" << std::flush;
+            auto isSame = testList[i + gallery_size * 2] == "1";
+
+            functor(files1, files2, isSame, progress);
         }
     }
 
-    void RestartTime()
-    {
-        start_time = std::chrono::high_resolution_clock::now();
-    }
+    int gallery_size;
+    int pair_size;
+    int total_items;
 
 private:
-    using Time = std::chrono::time_point<std::chrono::high_resolution_clock>;
-    Time start_time;
-    int total_items;
-    std::vector<double> times_per_item;
-    int images_per_item;
+    std::vector<std::string> testList;
 };
 
 void
@@ -86,14 +68,22 @@ CvImageToImageData(const cv::Mat& image)
 }
 
 double
-CalculateTPR(double fpr_divider, std::vector<double>& diff_scores, std::vector<double>& same_scores)
+GetThreshold(double fpr_divider, std::vector<double>& diff_scores, int& borderIndex)
 {
     std::sort(diff_scores.begin(), diff_scores.end());
     std::reverse(diff_scores.begin(), diff_scores.end());
-    int borderIndex = int(diff_scores.size() / fpr_divider);
+    borderIndex = int(diff_scores.size() / fpr_divider);
     double borderScore = diff_scores[borderIndex];
+    return borderScore;
+}
 
-    std::cout << "Border score: " << borderScore << " (at index " << borderIndex << ")" << std::endl;
+double
+CalculateTPR(double fpr_divider, std::vector<double>& diff_scores, std::vector<double>& same_scores)
+{
+    int borderIndex;
+    double borderScore = GetThreshold(fpr_divider, diff_scores, borderIndex);
+
+    std::cout << "Threshold: " << borderScore << " (at index " << borderIndex << ")" << std::endl;
 
     double tp = 0;
     for (int i = 0; i < same_scores.size(); ++i)
@@ -129,6 +119,38 @@ CalculateLandmarksAccuracy(std::map<std::string, std::vector<int>>& landmarksLis
     std::cout << "Landmarks error: " << mean[0] << " +- " << stddev[0] << " (max: " << maxDiff << ")" << std::endl;
 }
 
+void
+OutputFailedPairs(const TestIterator& test_iterator, const std::vector<double>& scores, std::vector<double>& diff_scores)
+{
+    std::ofstream f;
+    f.open("/home/administrator/nist/frvt/debug/false_positives.txt");
+
+    int borderIndex;
+    double threshold = GetThreshold(1000, diff_scores, borderIndex);
+
+    f << "Threshold: " << threshold << std::endl;
+
+    int pair = 0;
+    test_iterator.Loop([&] (const std::vector<std::string>& files1, const std::vector<std::string>& files2, bool isSame, int progress)
+    {
+        if (isSame && scores[pair] <= threshold)
+        {
+            f << "Same score: " << scores[pair] << std::endl;
+            for (const auto& p : files1) f << p << " "; f << std::endl;
+            for (const auto& p : files2) f << p << " "; f << std::endl;
+        }
+        if (!isSame && scores[pair] >= threshold)
+        {
+            f << "Diff score: " << scores[pair] << std::endl;
+            for (const auto& p : files1) f << p << " "; f << std::endl;
+            for (const auto& p : files2) f << p << " "; f << std::endl;
+        } 
+        ++pair;
+    });
+
+    f.close();
+}
+
 std::vector<uint8_t>
 GetTemplate(std::shared_ptr<Interface>& implPtr, std::vector<std::string> files, std::map<std::string, std::vector<int>>& landmarksDetection)
 {
@@ -161,10 +183,7 @@ RunVggTest(const std::string& list_path, const std::string& landmarks_list_path)
 {
     // Load test list
 
-    std::vector<std::string> testList = ReadTestList(list_path);
-    int gallery_size = std::stoi(testList[0]);
-    int pair_size = gallery_size * 2 + 1;
-    std::cout << "Found gallery size: " << gallery_size << std::endl;
+    TestIterator test_iterator(list_path);
 
     // Load landmarks data
 
@@ -181,32 +200,27 @@ RunVggTest(const std::string& list_path, const std::string& landmarks_list_path)
 
     std::vector<double> same_scores;
     std::vector<double> diff_scores;
+    std::vector<double> all_scores;
 
-    int total_items = int((testList.size() - 1) / pair_size);
+    ProgressBarPrinter progress_bar(test_iterator.total_items, test_iterator.gallery_size * 2);
 
-    ProgressBarPrinter progress_bar(total_items, gallery_size * 2);
-
-    for (int i = 1, progress = 0; i < testList.size(); i = i + pair_size, progress = progress + pair_size)
+    test_iterator.Loop([&] (const std::vector<std::string>& files1, const std::vector<std::string>& files2, bool isSame, int progress)
     {
         if (progress == 0) progress_bar.Print(progress);
 
-        std::vector<std::string> files1(testList.begin() + i, testList.begin() + i + gallery_size);
-        std::vector<std::string> files2(testList.begin() + i + gallery_size, testList.begin() + i + gallery_size * 2);
-
         std::vector<uint8_t> features1 = GetTemplate(implPtr, files1, landmarksDetection);
         std::vector<uint8_t> features2 = GetTemplate(implPtr, files2, landmarksDetection);
-
-        auto isSame = testList[i + gallery_size * 2] == "1";
 
         double score = 0;
         implPtr->matchTemplates(features1, features2, score);
 
         if (isSame) same_scores.push_back(score);
         else diff_scores.push_back(score);
+        all_scores.push_back(score);
 
         if (progress == 0) progress_bar.RestartTime();
         if (progress > 0) progress_bar.Print(progress);
-    }
+    });
 
     // Output TPR
 
@@ -218,6 +232,10 @@ RunVggTest(const std::string& list_path, const std::string& landmarks_list_path)
     // Landmarks accuracy
 
     CalculateLandmarksAccuracy(landmarksList, landmarksDetection);
+
+    // Dump analysis
+
+    OutputFailedPairs(test_iterator, all_scores, diff_scores);
 }
 
 int
