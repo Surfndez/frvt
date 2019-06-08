@@ -8,8 +8,8 @@
 
 using namespace FRVT_11;
 
-std::string MODEL_NAME = "/fd_r17_288-200000"; // ssd_resnet17_v1_288x288-200000
-int SSD_INPUT_SIZE = 288;
+std::string MODEL_NAME = "/fd_tf_dm100_320_0-40697"; // facessd_mobilenet_v2_dm100_320_0-40697
+int SSD_INPUT_SIZE = 320;
 
 SsdFaceDetector::SsdFaceDetector(const std::string &configDir)
 {
