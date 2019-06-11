@@ -13,6 +13,9 @@ public:
     virtual std::vector<int> Detect(const ImageData& imageData, const Rect &face) const override;
 
 private:
+    std::vector<int> DoDetect(cv::Mat& image, const Rect &face) const;
+    double CalcFlippedLandmarksDistance(const ImageData& imageData, const Rect &face, const std::vector<int>& landmarks) const;
+
     std::shared_ptr<TensorFlowInference> mTensorFlowInference;
 };
 }

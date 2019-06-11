@@ -10,6 +10,7 @@ using namespace FRVT_11;
 
 std::string DNET_MODEL_NAME = "/dnet_tffd_004";
 int INPUT_SIZE = 64;
+double MAX_FLIP_LANDMARKS_DISTANCE = 10000;
 
 struct ImageCrop
 {
@@ -141,6 +142,18 @@ AdjustLandmarks(const ImageCrop& imageCrop, const float* landmarks)
     return result;
 }
 
+std::vector<int>
+FlipLandmarks(const std::vector<int>& landmarks, int w)
+{
+    return {
+        w - landmarks[2], landmarks[3],
+        w - landmarks[0], landmarks[1],
+        w - landmarks[4], landmarks[5],
+        w - landmarks[8], landmarks[9],
+        w - landmarks[6], landmarks[7]
+    };
+}
+
 DnetLandmarksDetector::DnetLandmarksDetector(const std::string &configDir)
 {
     std::string modelPath = configDir + DNET_MODEL_NAME;
@@ -155,9 +168,23 @@ DnetLandmarksDetector::~DnetLandmarksDetector() {}
 std::vector<int>
 DnetLandmarksDetector::Detect(const ImageData& imageData, const Rect &face) const
 {
-    // Prepare image
-
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
+    auto landmarks = DoDetect(image, face);
+
+    auto distance = CalcFlippedLandmarksDistance(imageData, face, landmarks);
+
+    if (distance > MAX_FLIP_LANDMARKS_DISTANCE)
+    {
+        landmarks.clear();
+    }
+
+    return landmarks;
+}
+
+std::vector<int>
+DnetLandmarksDetector::DoDetect(cv::Mat& image, const Rect &face) const
+{
+    // Prepare image
 
     ImageCrop imageCrop = CropImage(image, face);
 
@@ -171,11 +198,27 @@ DnetLandmarksDetector::Detect(const ImageData& imageData, const Rect &face) cons
 
     std::vector<int> landmarks = AdjustLandmarks(imageCrop, output_landmarks);
 
-    // std::cout << "Dnet landmarks: ";
-    // for (int i = 0; i < 10; ++i) {
-    //     std::cout << landmarks[i] << " ";
-    // }
-    // std::cout << std::endl;
-
     return landmarks;
+}
+
+double
+DnetLandmarksDetector::CalcFlippedLandmarksDistance(const ImageData& imageData, const Rect &face, const std::vector<int>& landmarks) const
+{
+    if (MAX_FLIP_LANDMARKS_DISTANCE == 10000) return 0;
+
+    cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
+    cv::Mat flippedImage;
+    cv::flip(image, flippedImage, 1);
+
+    Rect flippedFace(image.cols - face.x1, face.y1, image.cols - face.x2, face.y2, face.score);
+
+    auto flippedLandmarks = DoDetect(flippedImage, flippedFace);
+    
+    flippedLandmarks = FlipLandmarks(flippedLandmarks, imageData.width);
+
+    double distance = 0;
+    for (int i = 0; i < 10; ++i) distance += std::pow(landmarks[i] - flippedLandmarks[i], 2);
+    distance = std::sqrt(distance);
+
+    return distance;
 }
