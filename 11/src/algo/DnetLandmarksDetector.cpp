@@ -8,7 +8,7 @@
 
 using namespace FRVT_11;
 
-std::string DNET_MODEL_NAME = "/dnet_tffd_004";
+std::string DNET_MODEL_NAME = "/dnet_tffd_006";
 int INPUT_SIZE = 64;
 double MAX_FLIP_LANDMARKS_DISTANCE = 10000;
 
