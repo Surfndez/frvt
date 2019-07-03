@@ -1,6 +1,7 @@
 #ifndef FACEDETECTOR_H_
 #define FACEDETECTOR_H_
 
+#include <vector>
 #include "Rect.h"
 #include "ImageData.h"
 

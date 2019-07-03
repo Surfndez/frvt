@@ -8,12 +8,9 @@
 
 using namespace FRVT_11;
 
-std::string MODEL_NAME = "/fd_tf_dm100_352_0-277768"; // facessd_mobilenet_v2_dm100_352_0-277768
-int SSD_INPUT_SIZE = 352;
-
-SsdFaceDetector::SsdFaceDetector(const std::string &configDir)
+SsdFaceDetector::SsdFaceDetector(const std::string& configDir, const std::string& modelName, int inputSize) : mInputSize(inputSize)
 {
-    std::string modelPath = configDir + MODEL_NAME;
+    std::string modelPath = configDir + modelName;
 
     mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(
         modelPath,
@@ -33,7 +30,7 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
 
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
 
-    cv::resize(image, image, cv::Size(SSD_INPUT_SIZE, SSD_INPUT_SIZE), 0, 0, cv::INTER_LINEAR);
+    cv::resize(image, image, cv::Size(mInputSize, mInputSize), 0, 0, cv::INTER_LINEAR);
 
     float ratioH = imageData.height / float(image.rows);
     float ratioW = imageData.width / float(image.cols);

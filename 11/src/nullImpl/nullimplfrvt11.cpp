@@ -16,7 +16,7 @@
 #include <opencv2/core.hpp>
 
 #include "nullimplfrvt11.h"
-#include "../algo/SsdFaceDetector.h"
+#include "../algo/FaceDetectionEnsemble.h"
 #include "../algo/DnetLandmarksDetector.h"
 #include "../algo/SphereFaceRecognizer.h"
 
@@ -62,7 +62,7 @@ NullImplFRVT11::initialize(const std::string &configDir)
     putenv("OMP_NUM_THREADS=1"); // Disable MKL muilti-threading
     cv::setNumThreads(0); // Disable OpenCV use of TBB
 
-    mFaceDetector = std::make_shared<SsdFaceDetector>(configDir);
+    mFaceDetector = std::make_shared<FaceDetectionEnsemble>(configDir);
     mLandmarksDetector = std::make_shared<DnetLandmarksDetector>(configDir);
     mFaceRecognizer = std::make_shared<SphereFaceRecognizer>(configDir);
 
