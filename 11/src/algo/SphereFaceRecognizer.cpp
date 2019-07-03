@@ -65,7 +65,7 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
 
 SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
-    std::string sphereModelPath = configDir + "/fa_108_33-125000"; // sphereface-sphereface_108_cosineface_nist_bbox_33-125000
+    std::string sphereModelPath = configDir + "/fa_108_36-25000"; // sphereface-sphereface_108_cosineface_nist_bbox_36-25000
     mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(sphereModelPath, {"input"}, {"output_features"}));
 }
 
@@ -84,16 +84,16 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
     cv::Mat featuresMat_1(512, 1, CV_32F, output_features);
 
     // infer on flipped image
-    cv::flip(image, image, 1);
-    auto output_2 = mTensorFlowInference->Infer(image);
-    float* output_features_2 = static_cast<float*>(TF_TensorData(output_2[0].get()));
-    cv::Mat featuresMat_2(512, 1, CV_32F, output_features_2);
+    // cv::flip(image, image, 1);
+    // auto output_2 = mTensorFlowInference->Infer(image);
+    // float* output_features_2 = static_cast<float*>(TF_TensorData(output_2[0].get()));
+    // cv::Mat featuresMat_2(512, 1, CV_32F, output_features_2);
 
     // convert to vector (function should be changed to return cv::Mat)
-    std::vector<float> features(1024);
+    std::vector<float> features(512);
     for (int i = 0; i < 512; ++i) {
         features[i] = featuresMat_1.at<float>(i, 0);
-        features[i+512] = featuresMat_2.at<float>(i, 0);
+        // features[i+512] = featuresMat_2.at<float>(i, 0);
     }
 
     return features;

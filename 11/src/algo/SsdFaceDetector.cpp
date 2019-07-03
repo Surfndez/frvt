@@ -32,13 +32,8 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
     // Prepare image
 
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
-    //cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
-
-    //std::cout << "\tFace detection -> Create image "; t.Test();
 
     cv::resize(image, image, cv::Size(SSD_INPUT_SIZE, SSD_INPUT_SIZE), 0, 0, cv::INTER_LINEAR);
-
-    //std::cout << "\tFace detection -> Resize image "; t.Test();
 
     float ratioH = imageData.height / float(image.rows);
     float ratioW = imageData.width / float(image.cols);
@@ -46,8 +41,6 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
     // Perform inference
 
     auto output = mTensorFlowInference->Infer(image);
-
-    //std::cout << "\tFace detection -> Inference "; t.Test();
 
     // Process output
 
@@ -60,11 +53,6 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
                 int(boxes[3] * image.cols * ratioW),
                 int(boxes[2] * image.rows * ratioH),
                 scores[0]);
-
-    //std::cout << "top score:         " << rect.score << std::endl;
-    //std::cout << "face bounding box: [" <<  rect.x1 << "," << rect.y1 << "," << rect.x2 << "," << rect.y2 << "]" << std::endl;
-
-    //std::cout << "\tFace detection -> Done "; t.Test();
 
     return {rect};
 }

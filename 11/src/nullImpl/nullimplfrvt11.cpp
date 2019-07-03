@@ -82,7 +82,7 @@ NullImplFRVT11::createTemplate(
         return result;
     }
     catch (const std::exception& e) {
-        std::cout << e.what() << std::endl;
+        //std::cout << e.what() << std::endl;
 
         // fill dummy values
         cv::Mat output_features = cv::Mat::zeros(512, 1, CV_32F);
@@ -102,8 +102,6 @@ NullImplFRVT11::safeCreateTemplate(
         std::vector<uint8_t> &templ,
         std::vector<EyePair> &eyeCoordinates)
 {
-    auto t = TimeMeasurement();
-
     std::vector<std::vector<float>> templates;
 
     for(const Image &image: faces) {
@@ -111,20 +109,23 @@ NullImplFRVT11::safeCreateTemplate(
         ImageData imageData(image.data, image.width, image.height, channels);
 
         try {
-            auto t1 = TimeMeasurement();
+            //auto t1 = TimeMeasurement();
             std::vector<Rect> rects = mFaceDetector->Detect(imageData);
             //std::cout << "Face detection "; t1.Test();
             const Rect& rect = rects[0]; // should be only one face in image
 
+            //auto t2 = TimeMeasurement();
             std::vector<int> landmarks = mLandmarksDetector->Detect(imageData, rect);
-            //std::cout << "DNet done. eyes: (" << landmarks[0] << "," << landmarks[1] << "),(" << landmarks[2] << "," << landmarks[3] << ")" << std::endl;
+            //std::cout << "Landmarks detection "; t2.Test();
+            if (landmarks.size() == 0) continue;
             eyeCoordinates.push_back(EyePair(true, true, landmarks[0], landmarks[1], landmarks[2], landmarks[3]));
 
-            auto t3 = TimeMeasurement();
+            //auto t3 = TimeMeasurement();
             std::vector<float> features = mFaceRecognizer->Infer(imageData, landmarks);
             //std::cout << "Face recognition "; t3.Test();
 
-            templates.push_back(features);
+            templates.push_back(std::vector<float>(features.begin(), features.begin()+512));
+            //templates.push_back(std::vector<float>(features.begin()+512, features.end()));
         }
         catch (const std::exception& e) {
             // Nothing to do for exceptions... move on to the next face...
@@ -134,12 +135,7 @@ NullImplFRVT11::safeCreateTemplate(
 
     cv::Mat output_features = AveragePoolOnTemplates(templates);
 
-    //std::cout << "averaged[:5] = " << output_features.at<float>(0, 0) << "," << output_features.at<float>(1, 0) << "," << output_features.at<float>(2, 0) << std::endl;
-
     CvMatToTemplate(output_features, templ);
-
-    //std::cout << "Create template "; t.Test();
-    //std::cout << "Create template number of threads: " << ValidateNumThreads() << std::endl;
 
     return ReturnStatus(ReturnCode::Success);
 }
