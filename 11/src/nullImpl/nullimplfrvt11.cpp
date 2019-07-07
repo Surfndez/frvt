@@ -112,6 +112,7 @@ NullImplFRVT11::safeCreateTemplate(
             //auto t1 = TimeMeasurement();
             std::vector<Rect> rects = mFaceDetector->Detect(imageData);
             //std::cout << "Face detection "; t1.Test();
+            if (rects.size() == 0) continue;
             const Rect& rect = rects[0]; // should be only one face in image
 
             //auto t2 = TimeMeasurement();
