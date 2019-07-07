@@ -30,6 +30,10 @@ FaceDetectionEnsemble::Detect(const ImageData &imageData) const
             detections.push_back(rects);
         }
     }
+
+    if (detections.size() == 0) {
+        return {};
+    }
     
     Rect rect(0, 0, 0, 0, 100);
     for (auto& d : detections) {
