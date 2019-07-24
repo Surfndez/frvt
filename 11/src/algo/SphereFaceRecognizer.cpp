@@ -65,7 +65,7 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
 
 SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
-    std::string sphereModelPath = configDir + "/fa_108_36-25000"; // sphereface-sphereface_108_cosineface_nist_bbox_36-25000
+    std::string sphereModelPath = configDir + "/fa_108_50-200000"; // sphereface-sphereface_108_cosineface_nist_bbox_50-200000
     mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(sphereModelPath, {"input"}, {"output_features"}));
 }
 

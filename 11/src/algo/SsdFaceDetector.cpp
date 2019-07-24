@@ -45,7 +45,7 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
     float* scores = static_cast<float*>(TF_TensorData(output[1].get()));
     float* boxes = static_cast<float*>(TF_TensorData(output[2].get()));
 
-    if (scores[0] > 0.0) {
+    if (scores[0] > 0.3) {
         Rect rect(  int(boxes[1] * image.cols * ratioW),
                     int(boxes[0] * image.rows * ratioH),
                     int(boxes[3] * image.cols * ratioW),

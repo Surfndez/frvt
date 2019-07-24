@@ -77,20 +77,12 @@ NullImplFRVT11::createTemplate(
         std::vector<EyePair> &eyeCoordinates)
 {
     try {
-        auto result = safeCreateTemplate(faces, role, templ, eyeCoordinates);
-        if (eyeCoordinates.size() == 0) throw std::runtime_error("no faces found");
-        return result;
+        return safeCreateTemplate(faces, role, templ, eyeCoordinates);
     }
     catch (const std::exception& e) {
         //std::cout << e.what() << std::endl;
-
-        // fill dummy values
-        cv::Mat output_features = cv::Mat::zeros(512, 1, CV_32F);
-        CvMatToTemplate(output_features, templ);
-
+        templ.clear();
         eyeCoordinates.clear();
-        for(const Image &image: faces) eyeCoordinates.push_back(EyePair(true, true, 0, 0, 1, 1));
-
         return ReturnStatus(ReturnCode::UnknownError);
     }
 }
@@ -134,9 +126,10 @@ NullImplFRVT11::safeCreateTemplate(
         }
     }
 
-    cv::Mat output_features = AveragePoolOnTemplates(templates);
-
-    CvMatToTemplate(output_features, templ);
+    if (templates.size() > 0) {
+        cv::Mat output_features = AveragePoolOnTemplates(templates);
+        CvMatToTemplate(output_features, templ);
+    }
 
     return ReturnStatus(ReturnCode::Success);
 }
@@ -147,11 +140,14 @@ NullImplFRVT11::matchTemplates(
         const std::vector<uint8_t> &enrollTemplate,
         double &similarity)
 {
-    cv::Mat f1(512, 1, CV_32F, (float *)verifTemplate.data());
-    cv::Mat f2(512, 1, CV_32F, (float *)enrollTemplate.data());
-
-    similarity = 300 * (3 - cv::norm(f1 - f2));
-
+    if (verifTemplate.size() == 0 || enrollTemplate.size() == 0) {
+        similarity = 0;
+    }
+    else {
+        cv::Mat f1(512, 1, CV_32F, (float *)verifTemplate.data());
+        cv::Mat f2(512, 1, CV_32F, (float *)enrollTemplate.data());
+        similarity = 300 * (3 - cv::norm(f1 - f2));
+    }
     return ReturnStatus(ReturnCode::Success);
 }
 
