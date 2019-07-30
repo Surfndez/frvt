@@ -37,6 +37,9 @@ CropImage(const cv::Mat& image, const std::vector<int>& landmarks)
     y1 = std::max(0, y1);
     y2 = std::min(image.rows, y2);
 
+    //std::cout << "orig h w: " << image.rows << " " << image.cols << std::endl;
+    //std::cout << "crop box: " << x1 << " " << y1 << " " << x2 << " " << y2 << std::endl;
+
     cv::Mat cropped = image(cv::Range(y1, y2), cv::Range(x1, x2));
 
     return cropped;
@@ -48,17 +51,23 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
     // crop
     cv::Mat cropped = CropImage(image, landmarks);
 
+    //std::cout << "cropped size: " << cropped.rows << " " << cropped.cols << std::endl;
+
+    // resize
+    cv::resize(cropped, cropped, cv::Size(128, 128), 0, 0, cv::INTER_LINEAR);
+    
     // To gray scale
     cv::Mat gray;
     cv::cvtColor(cropped, gray, cv::COLOR_RGB2GRAY);
-
-    // resize
-    cv::resize(gray, gray, cv::Size(128, 128), 0, 0, cv::INTER_LINEAR);
 
     // normalized
     gray.convertTo(gray, CV_32FC1);
     gray /= 255;
     gray -= 0.5;
+
+    //double min, max;
+    //cv::minMaxLoc(gray, &min, &max);
+    //std::cout << "min-max " << min << "-" << max << std::endl;
 
     return gray;
 }
@@ -66,7 +75,7 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
 SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
     std::string sphereModelPath = configDir + "/fa_108_50-200000"; // sphereface-sphereface_108_cosineface_nist_bbox_50-200000
-    mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(sphereModelPath, {"input"}, {"output_features"}));
+    mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(sphereModelPath, {"input"}, {"embeddings"}));
 }
 
 SphereFaceRecognizer::~SphereFaceRecognizer() {}
@@ -75,6 +84,8 @@ std::vector<float>
 SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& landmarks) const
 {
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
+
+    //std::cout << "1: h w : " << image.rows << " " << image.cols << std::endl;
     
     image = NormalizeImage(image, landmarks);
 
@@ -95,6 +106,8 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
         features[i] = featuresMat_1.at<float>(i, 0);
         // features[i+512] = featuresMat_2.at<float>(i, 0);
     }
+
+    //std::cout << features[0] << " " << features[1] << std::endl;
 
     return features;
 }
