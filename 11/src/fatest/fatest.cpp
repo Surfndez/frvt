@@ -97,6 +97,11 @@ CalculateTPR(double fpr_divider, std::vector<double>& diff_scores, std::vector<d
 void
 CalculateLandmarksAccuracy(std::map<std::string, std::vector<int>>& landmarksList, std::map<std::string, std::vector<int>>& landmarksDetection)
 {
+    if (landmarksDetection.size() == 0) {
+        std::cout << "No landmarks detected - not calculating accuracy" << std::endl;
+        return;
+    }
+
     std::cout << "Calculating landmarks detections over " << landmarksDetection.size() << " images... ";
     std::vector<double> diffs;
     for (const auto& kv : landmarksDetection) {
