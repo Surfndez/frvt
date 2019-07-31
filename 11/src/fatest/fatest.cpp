@@ -163,6 +163,7 @@ GetTemplate(std::shared_ptr<Interface>& implPtr, std::vector<std::string> files,
     for (const std::string& file : files) {
         auto path = "/home/administrator/face_data/benchmarks/original/" + file;
         cv::Mat image = cv::imread(path);
+        cv::cvtColor(image, image, cv::COLOR_BGR2RGB); // opencv reads images as BGR
         if(!image.data) throw std::runtime_error("Could not open or find the image");
         Image imageData = CvImageToImageData(image);
         images.push_back(imageData);
