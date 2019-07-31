@@ -8,6 +8,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "frvt11.h"
 #include "util.h"
