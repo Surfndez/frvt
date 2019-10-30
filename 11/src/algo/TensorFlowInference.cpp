@@ -49,8 +49,8 @@ TensorFlowInference::Infer(const cv::Mat& image)
 
     // Prapare inputs
 
-    auto element_size = image.type() == CV_32F ? sizeof(float) : sizeof(char);
-    auto tf_type = image.type() == CV_32F ? TF_FLOAT : TF_UINT8;
+    auto element_size = image.type() == CV_32F || image.type() == CV_32FC3 ? sizeof(float) : sizeof(char);
+    auto tf_type = image.type() == CV_32F || image.type() == CV_32FC3 ? TF_FLOAT : TF_UINT8;
 
     TF_Output input_op = {TF_GraphOperationByName(graph, mInputLayers[0].c_str()), 0}; // Currently assume single input...
     if (input_op.oper == nullptr) {
