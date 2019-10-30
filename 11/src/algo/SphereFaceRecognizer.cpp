@@ -56,25 +56,20 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
     // resize
     cv::resize(cropped, cropped, cv::Size(128, 128), 0, 0, cv::INTER_LINEAR);
     
-    // To gray scale
-    cv::Mat gray;
-    cv::cvtColor(cropped, gray, cv::COLOR_RGB2GRAY);
-
-    // normalized
-    gray.convertTo(gray, CV_32FC1);
-    gray /= 255;
-    gray -= 0.5;
+    cropped.convertTo(cropped, CV_32FC3);
+    cropped /= 255;
+    cropped -= cv::Scalar(0.5, 0.5, 0.5);
 
     //double min, max;
-    //cv::minMaxLoc(gray, &min, &max);
+    //cv::minMaxLoc(cropped, &min, &max);
     //std::cout << "min-max " << min << "-" << max << std::endl;
 
-    return gray;
+    return cropped;
 }
 
 SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
-    std::string sphereModelPath = configDir + "/fa_108_50-200000"; // sphereface-sphereface_108_cosineface_nist_bbox_50-200000
+    std::string sphereModelPath = configDir + "/fa_v0_108_01-1375000"; // sphereface-sphere_v0_108_dm100_se_arcface_sqrbox_rgb_01-1375000
     mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(sphereModelPath, {"input"}, {"embeddings"}));
 }
 
