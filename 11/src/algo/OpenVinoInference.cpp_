@@ -2,8 +2,6 @@
 
 #include <inference_engine.hpp>
 
-#include "TimeMeasurement.h"
-
 using namespace FRVT_11;
 using namespace InferenceEngine;
 
@@ -46,6 +44,11 @@ OpenVinoInference::Init()
     // -----------------------------------------------------------------------------------------------------
 
     // --------------------------- 4. Loading model to the plugin ------------------------------------------
+    //std::map<std::string, std::string> config = {
+    //    {InferenceEngine::PluginConfigParams::KEY_CPU_THREADS_NUM, "1"},
+    //    {InferenceEngine::PluginConfigParams::KEY_CPU_BIND_THREAD, InferenceEngine::PluginConfigParams::YES},
+    //   {InferenceEngine::PluginConfigParams::KEY_CPU_THROUGHPUT_STREAMS, "1"}
+    //    };
     mExecutableNetwork = std::make_shared<ExecutableNetwork>(mInferencePlugin->LoadNetwork(*mCNNNetwork, {}));
     // -----------------------------------------------------------------------------------------------------
 
@@ -61,11 +64,7 @@ OpenVinoInference::Init()
 std::shared_ptr<InferenceEngine::Blob>
 OpenVinoInference::Infer(const cv::Mat& image)
 {
-    auto t = TimeMeasurement();
-    
     Init();
-
-    std::cout << "OpenVinoInference::Infer 0. "; t.Test();
 
     // --------------------------- 6. Prepare input --------------------------------------------------------
     Blob::Ptr input = mInferRequest->GetBlob(mInputName);
@@ -86,19 +85,13 @@ OpenVinoInference::Infer(const cv::Mat& image)
 
     // -----------------------------------------------------------------------------------------------------
 
-    std::cout << "OpenVinoInference::Infer 1. "; t.Test();
-
     // --------------------------- 7. Do inference --------------------------------------------------------
     mInferRequest->Infer();
     // -----------------------------------------------------------------------------------------------------
 
-    std::cout << "OpenVinoInference::Infer 2. "; t.Test();
-
     // --------------------------- 8. Process output ------------------------------------------------------
     Blob::Ptr output = mInferRequest->GetBlob(mOutputName);
     // -----------------------------------------------------------------------------------------------------
-    
-    std::cout << "OpenVinoInference::Infer 3. "; t.Test();
 
     return output;
 }
