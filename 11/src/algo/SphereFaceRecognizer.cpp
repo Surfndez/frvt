@@ -12,6 +12,8 @@ using namespace FRVT_11;
 cv::Mat
 CropImage(const cv::Mat& image, const std::vector<int>& landmarks)
 {
+    // Find min and max values from landmarks
+
     std::vector<int> xPoints;
     std::vector<int> yPoints;
     for (int i = 0; i < 10; i += 2) {
@@ -26,19 +28,54 @@ CropImage(const cv::Mat& image, const std::vector<int>& landmarks)
     
     int w = (xMax - xMin);
     int h = (yMax - yMin);
+
+    // Calculate bounding box
     
     int x1 = xMin - int(w * 0.75);
     int x2 = xMax + int(w * 0.75);
     int y1 = yMin - int(h * 0.75);
     int y2 = yMax + int(h * 0.75);
 
+    // Keep original face ratio
+
+    w = x2 - x1;
+    h = y2 - y1;
+    if (h > w)
+    {
+        int c = int((x1 + x2) / 2);
+        int half_w = int(h / 2);
+        x1 = c - half_w;
+        x2 = c + half_w;
+    }
+    else
+    {
+        int c = int((y1 + y2) / 2);
+        int half_h = int(w / 2);
+        y1 = c - half_h;
+        y2 = c + half_h;
+    }
+    w = x2 - x1;
+    h = y2 - y1;
+
+    // Check if need to pad image
+    // std::vector<int> xy = {-x1, -y1, x2 + 1 - w, y2 + 1 - h};
+    // int out_of_border = *std::max_element(xy.begin(), xy.end());
+    // if (out_of_border > 0)
+    // {
+    //     cv::copyMakeBorder(image, image, out_of_border, out_of_border, out_of_border, out_of_border, cv::BORDER_CONSTANT, cv::mean(image).val[0]);
+    //     x1 += out_of_border;
+    //     x2 += out_of_border;
+    //     y1 += out_of_border;
+    //     y2 += out_of_border;
+    // }
+
+    // TODO..... remove once padding is done
     x1 = std::max(0, x1);
     x2 = std::min(image.cols, x2);
     y1 = std::max(0, y1);
     y2 = std::min(image.rows, y2);
 
-    //std::cout << "orig h w: " << image.rows << " " << image.cols << std::endl;
-    //std::cout << "crop box: " << x1 << " " << y1 << " " << x2 << " " << y2 << std::endl;
+    // Crop
 
     cv::Mat cropped = image(cv::Range(y1, y2), cv::Range(x1, x2));
 
