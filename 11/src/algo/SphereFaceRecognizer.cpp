@@ -92,6 +92,9 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
 
     // resize
     cv::resize(cropped, cropped, cv::Size(128, 128), 0, 0, cv::INTER_LINEAR);
+
+    // to BGR
+    cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
     
     cropped.convertTo(cropped, CV_32FC3);
     cropped /= 255;
