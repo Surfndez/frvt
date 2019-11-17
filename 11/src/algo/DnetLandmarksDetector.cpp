@@ -157,7 +157,6 @@ DnetLandmarksDetector::Detect(const ImageData& imageData, const Rect &face) cons
 {
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
     auto landmarks = DoDetect(image, face);
-    //std::cout << landmarks[0] << " " << landmarks[1]<< " " << landmarks[2] << " " << landmarks[3] << " " << landmarks[4] << " " << landmarks[5] << std::endl;
     return landmarks;
 }
 

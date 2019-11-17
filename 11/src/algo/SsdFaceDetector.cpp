@@ -4,8 +4,6 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include "../algo/TimeMeasurement.h"
-
 using namespace FRVT_11;
 
 SsdFaceDetector::SsdFaceDetector(const std::string& configDir, const std::string& modelName, int inputSize) : mInputSize(inputSize)
@@ -24,16 +22,12 @@ SsdFaceDetector::~SsdFaceDetector() {}
 std::vector<Rect>
 SsdFaceDetector::Detect(const ImageData &imageData) const
 {
-    auto t = TimeMeasurement();
-
     // Prepare image
 
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
 
-    cv::resize(image, image, cv::Size(mInputSize, mInputSize), 0, 0, cv::INTER_LINEAR);
-
-    float ratioH = imageData.height / float(image.rows);
-    float ratioW = imageData.width / float(image.cols);
+    float ratioH = float(image.rows);
+    float ratioW = float(image.cols);
 
     // Perform inference
 
@@ -46,10 +40,10 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
     float* boxes = static_cast<float*>(TF_TensorData(output[2].get()));
 
     if (scores[0] > 0.3) {
-        Rect rect(  int(boxes[1] * image.cols * ratioW),
-                    int(boxes[0] * image.rows * ratioH),
-                    int(boxes[3] * image.cols * ratioW),
-                    int(boxes[2] * image.rows * ratioH),
+        Rect rect(  int(boxes[1] * ratioW),
+                    int(boxes[0] * ratioH),
+                    int(boxes[3] * ratioW),
+                    int(boxes[2] * ratioH),
                     scores[0]);
         return {rect};
     }
