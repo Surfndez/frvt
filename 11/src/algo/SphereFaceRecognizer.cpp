@@ -1,8 +1,8 @@
 #include "SphereFaceRecognizer.h"
 
 #include <algorithm>
-#include <iostream>
-#include <fstream>
+// #include <iostream>
+// #include <fstream>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
