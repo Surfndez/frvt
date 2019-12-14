@@ -5,19 +5,14 @@
 #include <opencv2/core.hpp>
 
 #include "InferenceEngine.h"
+#include "inference_engine.hpp"
 
-namespace InferenceEngine {
-    class InferencePlugin;
-    class CNNNetwork;
-    class ExecutableNetwork;
-    class InferRequest;
-    class Blob;
-}
+using namespace InferenceEngine;
 
 namespace FRVT_11 {
     class OpenVinoInference : public IInferenceEngine {
 public:
-    OpenVinoInference(const std::string &modelPath);
+    OpenVinoInference(const std::string &modelPath, std::initializer_list<std::string> inputLayers, std::initializer_list<std::string> outputLayers);
 
     void Init();
 
@@ -26,12 +21,10 @@ public:
 private:
     std::string mModelPath;
 
-    std::shared_ptr<InferenceEngine::InferencePlugin> mInferencePlugin;
-    std::shared_ptr<InferenceEngine::CNNNetwork> mCNNNetwork;
-    std::shared_ptr<InferenceEngine::ExecutableNetwork> mExecutableNetwork;
-    std::shared_ptr<InferenceEngine::InferRequest> mInferRequest;
+    InferRequest m_infer_request;
+    CNNNetwork m_network;
+    CNNNetReader m_network_reader;
     std::string mInputName;
-    std::string mOutputName;
 };
 }
 

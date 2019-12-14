@@ -6,6 +6,11 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <iostream>
+#include <chrono>
+#include <ratio>
+#include <thread>
+
 using namespace FRVT_11;
 
 cv::Mat
@@ -78,7 +83,8 @@ CropImage(const cv::Mat& image, const std::vector<int>& landmarks)
     y1 = std::max(0.f, y1);
     y2 = std::min(float(image.rows), y2);
 
-    // std::cout << "\tCrop coords: " << image.rows << " " << image.cols << " -> " << int(x1) << " " << int(y1) << " " << int(x2) << " " << int(y2) << std::endl;
+
+   //  std::cout << "\tCrop coords: " << image.rows << " " << image.cols << " -> " << int(x1) << " " << int(y1) << " " << int(x2) << " " << int(y2) << std::endl;
 
     // Crop
 
@@ -111,19 +117,19 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
 
     // double min, max;
     // cv::minMaxLoc(cropped, &min, &max);
-    // std::cout << "\tmin-max " << min << "-" << max << std::endl;
+   //  std::cout << "\tmin-max " << min << "-" << max << std::endl;
 
     // cv::Scalar mean, stddev;
     // cv::meanStdDev (cropped, mean, stddev);
-    // std::cout << "\tMean-Std: " << mean << " " << stddev << std::endl;
+   //  std::cout << "\tMean-Std: " << mean << " " << stddev << std::endl;
 
     return cropped;
 }
 
 SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
-    std::string sphereModelPath = configDir + "/fa_v0_108_01-1375000"; // sphereface-sphere_v0_108_dm100_se_arcface_sqrbox_rgb_01-1375000
-    mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(sphereModelPath, {"input"}, {"embeddings"}));
+    std::string sphereModelPath = "/home/administrator/nist/models/sphereface-sphere_v0_108_dm100_se_arcface_sqrbox_rgb_01-1375000_features"; // sphereface-sphere_v0_108_dm100_se_arcface_sqrbox_rgb_01-1375000
+    mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(sphereModelPath, {"input"}, {"embeddings"}));
 }
 
 SphereFaceRecognizer::~SphereFaceRecognizer() {}
@@ -131,11 +137,12 @@ SphereFaceRecognizer::~SphereFaceRecognizer() {}
 std::vector<float>
 SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& landmarks) const
 {
-    cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
+   cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
 
     //std::cout << "1: h w : " << image.rows << " " << image.cols << std::endl;
     
-    image = NormalizeImage(image, landmarks);
+   image = NormalizeImage(image, landmarks);
+
 
     // cv::Mat flat = image.reshape(1, image.cols*image.rows*image.channels());
     // std::vector<float> vec = image.isContinuous()? flat : flat.clone();
@@ -144,22 +151,26 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
     // fout.close();
 
     // infer on original image
-    auto output = mTensorFlowInference->Infer(image);
-    float* output_features = static_cast<float*>(TF_TensorData(output[0].get()));
-    cv::Mat featuresMat_1(512, 1, CV_32F, output_features);
+    auto output = mModelInference ->Infer(image);
+    const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
+    cv::Mat featuresMat_1(512, 1, CV_32F, result);
 
     // infer on flipped image
-    // cv::flip(image, image, 1);
-    // auto output_2 = mTensorFlowInference->Infer(image);
-    // float* output_features_2 = static_cast<float*>(TF_TensorData(output_2[0].get()));
-    // cv::Mat featuresMat_2(512, 1, CV_32F, output_features_2);
+     cv::flip(image, image, 1);
+     auto output_2 = mModelInference ->Infer(image);
+     const auto result1 = output_2->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
+
+ //   float* output_features_2 = static_cast<float*>(TF_TensorData(output_2[0].get()));
+    cv::Mat featuresMat_2(512, 1, CV_32F, result1 );
+
+    // TODO: Average vectors and re-norm !!!
 
     // convert to vector (function should be changed to return cv::Mat)
     std::vector<float> features(512);
     for (int i = 0; i < 512; ++i) {
-        features[i] = featuresMat_1.at<float>(i, 0);
-        // features[i+512] = featuresMat_2.at<float>(i, 0);
-    }
+         features[i] = featuresMat_1.at<float>(i, 0);
+        features[i] = (featuresMat_1.at<float>(i, 0) = featuresMat_2.at<float>(i, 0)) / 2;
+   }
 
     // std::cout << "\tFeatures norm: " << cv::norm(featuresMat_1) << std::endl;
 

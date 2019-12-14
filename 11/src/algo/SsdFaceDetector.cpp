@@ -10,11 +10,8 @@ SsdFaceDetector::SsdFaceDetector(const std::string& configDir, const std::string
 {
     std::string modelPath = configDir + modelName;
 
-    mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(
-        modelPath,
-        {"image_tensor"},
-        {"num_detections", "detection_scores", "detection_boxes", "detection_classes"})
-    );
+    mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(modelPath, {"image_tensor"},
+        {"num_detections", "detection_scores", "detection_boxes", "detection_classes"}));
 }
 
 SsdFaceDetector::~SsdFaceDetector() {}
@@ -31,13 +28,15 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
 
     // Perform inference
 
-    auto output = mTensorFlowInference->Infer(image);
+    auto output = mModelInference->Infer(image);
 
+    int len = output->size();
     // Process output
+    float *outputPtr = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type *>();
 
-    float* num_detections = static_cast<float*>(TF_TensorData(output[0].get()));
-    float* scores = static_cast<float*>(TF_TensorData(output[1].get()));
-    float* boxes = static_cast<float*>(TF_TensorData(output[2].get()));
+    float* num_detections = outputPtr;//static_cast<float*>(TF_TensorData(output[0].get()));
+    float* scores = &outputPtr[1];//static_cast<float*>(TF_TensorData(output[1].get()));
+    float* boxes = &outputPtr[2];//static_cast<float*>(TF_TensorData(output[2].get()));
 
     if (scores[0] > 0.3) {
         Rect rect(  int(boxes[1] * ratioW),
@@ -50,4 +49,5 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
     else {
         return {};
     }
+    return {};
 }

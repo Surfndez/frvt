@@ -1,7 +1,7 @@
 #ifndef SSDFACEDETECTOR_H_
 #define SSDFACEDETECTOR_H_
 
-#include "TensorFlowInference.h"
+#include "OpenVinoInference.h"
 #include "FaceDetector.h"
 
 namespace FRVT_11 {
@@ -13,7 +13,7 @@ public:
     virtual std::vector<Rect> Detect(const ImageData &image) const override;
 
 private:
-    std::shared_ptr<TensorFlowInference> mTensorFlowInference;
+    std::shared_ptr<OpenVinoInference> mModelInference;
     int mInputSize;
 };
 }
