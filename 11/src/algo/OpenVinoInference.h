@@ -12,7 +12,7 @@ using namespace InferenceEngine;
 namespace FRVT_11 {
     class OpenVinoInference : public IInferenceEngine {
 public:
-    OpenVinoInference(const std::string &modelPath, std::initializer_list<std::string> inputLayers, std::initializer_list<std::string> outputLayers);
+    OpenVinoInference(const std::string &modelPath);
 
     void Init();
 
@@ -20,7 +20,6 @@ public:
 
 private:
     std::string mModelPath;
-
     InferRequest m_infer_request;
     CNNNetwork m_network;
     CNNNetReader m_network_reader;

@@ -11,7 +11,7 @@
 using namespace FRVT_11;
 using namespace InferenceEngine;
 
-OpenVinoInference::OpenVinoInference(const std::string &modelPath, std::initializer_list<std::string> inputLayers, std::initializer_list<std::string> outputLayers) : mModelPath(modelPath)
+OpenVinoInference::OpenVinoInference(const std::string &modelPath) : mModelPath(modelPath)
 {
     Init();
 }
@@ -51,12 +51,13 @@ OpenVinoInference::Init()
 	ie.AddExtension(extension_ptr, "CPU");
 	// -----------------------------------------------------------------------------------------------------
 	// --------------------------- 4. Loading model to the plugin ------------------------------------------
-     ExecutableNetwork executable_network = ie.LoadNetwork(m_network, "CPU");
+    ExecutableNetwork executable_network = ie.LoadNetwork(m_network, "CPU");
 
-        // --------------------------- 5. Create infer request -------------------------------------------------
-     m_infer_request = executable_network.CreateInferRequest();
-        // Set private members
-     mInputName = input_name;
+	// --------------------------- 5. Create infer request -------------------------------------------------
+    m_infer_request = executable_network.CreateInferRequest();
+	
+	// Set private members
+    mInputName = input_name;
 }
 
 std::shared_ptr<InferenceEngine::Blob>
@@ -66,18 +67,11 @@ OpenVinoInference::Infer(const cv::Mat& image)
     auto input_data = input->buffer().as<PrecisionTrait<Precision::FP32>::value_type *>();
     size_t channels_number = input->getTensorDesc().getDims()[1];
     size_t image_size = input->getTensorDesc().getDims()[3] * input->getTensorDesc().getDims()[2] * channels_number;
-	
-	std::cout << "Expected size: " << input->getTensorDesc().getDims()[3] << "," << input->getTensorDesc().getDims()[2] << "," << channels_number << std::endl;
-
     memcpy((void*)input_data, (void*)image.data, image_size * sizeof(float));
-	auto t1 = std::chrono::high_resolution_clock::now();
+
     m_infer_request.Infer();   
-	auto t2 = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
-   // std::cout << "infer took " << fp_ms.count() << std::endl;
-
-
-    OutputsDataMap outputInfo(m_network.getOutputsInfo());
+    
+	OutputsDataMap outputInfo(m_network.getOutputsInfo());
     Blob::Ptr outputBlob = m_infer_request.GetBlob(outputInfo.begin()->first);
 	return outputBlob;
 }

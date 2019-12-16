@@ -10,8 +10,7 @@ SsdFaceDetector::SsdFaceDetector(const std::string& configDir, const std::string
 {
     std::string modelPath = configDir + modelName;
 
-    mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(modelPath, {"image_tensor"},
-        {"num_detections", "detection_scores", "detection_boxes", "detection_classes"}));
+    mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(modelPath));
 }
 
 SsdFaceDetector::~SsdFaceDetector() {}
@@ -34,8 +33,6 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
     auto output = mModelInference->Infer(image);
 
     // Process output
-    
-    std::cout << std::endl << std::endl;
 
     float *detection = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type *>();
     
@@ -45,9 +42,6 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
                     int(detection[5] * ratioW),
                     int(detection[6] * ratioH),
                     detection[2]);
-        std::cout << "\tConfidence: " << rect.score << std::endl;
-        std::cout << "\tRect: " << rect.x1 << " " << rect.y1 << " " << rect.x2 << " " << rect.y2 << std::endl;
-        std::cout << std::endl;
         return {rect};
     }
     else {

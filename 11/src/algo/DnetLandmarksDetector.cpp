@@ -145,9 +145,7 @@ DnetLandmarksDetector::DnetLandmarksDetector(const std::string &configDir)
 {
     std::string modelPath = configDir + DNET_MODEL_NAME;
 
-    mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(
-        modelPath, {"d_net_input"}, {"lm_output/BiasAdd"})
-    );
+    mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(modelPath));
 }
 
 DnetLandmarksDetector::~DnetLandmarksDetector() {}

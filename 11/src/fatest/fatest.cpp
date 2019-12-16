@@ -89,7 +89,7 @@ RunTest(const std::string& list_path)
         if (progress == 0) progress_bar.Print(progress);
 
         const std::string& file = testList[progress];
-        auto path = "/home/administrator/face_data/benchmarks/original/" + file;
+        auto path = "/home/administrator/face_data/benchmarks/original" + file;
 
         cv::Mat image = LoadImage(path);
         FRVT::Image imageData = CvImageToImageData(image);
@@ -103,7 +103,7 @@ RunTest(const std::string& list_path)
         collectedFeatures.push_back(features);
         collectedEyes.push_back(eyeCoordinates);
 
-        PrintTemplate(eyeCoordinates, features);
+        // PrintTemplate(eyeCoordinates, features);
 
         if (progress == 0) progress_bar.RestartTime();
         if (progress > 0) progress_bar.Print(progress / 2);
