@@ -66,6 +66,9 @@ OpenVinoInference::Infer(const cv::Mat& image)
     auto input_data = input->buffer().as<PrecisionTrait<Precision::FP32>::value_type *>();
     size_t channels_number = input->getTensorDesc().getDims()[1];
     size_t image_size = input->getTensorDesc().getDims()[3] * input->getTensorDesc().getDims()[2] * channels_number;
+	
+	std::cout << "Expected size: " << input->getTensorDesc().getDims()[3] << "," << input->getTensorDesc().getDims()[2] << "," << channels_number << std::endl;
+
     memcpy((void*)input_data, (void*)image.data, image_size * sizeof(float));
 	auto t1 = std::chrono::high_resolution_clock::now();
     m_infer_request.Infer();   

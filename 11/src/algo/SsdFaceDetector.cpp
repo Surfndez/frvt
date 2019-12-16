@@ -22,32 +22,35 @@ SsdFaceDetector::Detect(const ImageData &imageData) const
     // Prepare image
 
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
+    image.convertTo(image, CV_32FC3);
 
     float ratioH = float(image.rows);
     float ratioW = float(image.cols);
+
+    cv::resize(image, image, cv::Size(mInputSize, mInputSize), 0, 0, cv::INTER_LINEAR);
 
     // Perform inference
 
     auto output = mModelInference->Infer(image);
 
-    int len = output->size();
     // Process output
-    float *outputPtr = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type *>();
+    
+    std::cout << std::endl << std::endl;
 
-    float* num_detections = outputPtr;//static_cast<float*>(TF_TensorData(output[0].get()));
-    float* scores = &outputPtr[1];//static_cast<float*>(TF_TensorData(output[1].get()));
-    float* boxes = &outputPtr[2];//static_cast<float*>(TF_TensorData(output[2].get()));
-
-    if (scores[0] > 0.3) {
-        Rect rect(  int(boxes[1] * ratioW),
-                    int(boxes[0] * ratioH),
-                    int(boxes[3] * ratioW),
-                    int(boxes[2] * ratioH),
-                    scores[0]);
+    float *detection = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type *>();
+    
+    if (detection[2] > 0.3) {
+        Rect rect(  int(detection[3] * ratioW),
+                    int(detection[4] * ratioH),
+                    int(detection[5] * ratioW),
+                    int(detection[6] * ratioH),
+                    detection[2]);
+        std::cout << "\tConfidence: " << rect.score << std::endl;
+        std::cout << "\tRect: " << rect.x1 << " " << rect.y1 << " " << rect.x2 << " " << rect.y2 << std::endl;
+        std::cout << std::endl;
         return {rect};
     }
     else {
         return {};
     }
-    return {};
 }
