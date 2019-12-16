@@ -1,55 +1,12 @@
-#include <iostream>
-#include <stdexcept>
-#include <algorithm>
-#include <iomanip>
-#include <numeric>
-#include <cstdlib>
 #include <fstream>
-
-#include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
+#include <iostream>
 
 #include "frvt11.h"
-#include "util.h"
 #include "TestUtils.h"
 #include "ProgressBar.h"
 
 using namespace FRVT;
 using namespace FRVT_11;
-
-class TestIterator {
-public:
-    TestIterator(const std::string& list_path)
-    {
-        testList = ReadTestList(list_path);
-        gallery_size = std::stoi(testList[0]);
-        pair_size = gallery_size * 2 + 1;
-        total_items = int((testList.size() - 1) / pair_size);
-        std::cout << "Found gallery size: " << gallery_size << std::endl;
-    }
-
-    template<typename Functor>
-    void Loop(Functor functor) const
-    {
-        for (int i = 1, progress = 0; i < testList.size(); i = i + pair_size, progress = progress + pair_size)
-        {
-            std::vector<std::string> files1(testList.begin() + i, testList.begin() + i + gallery_size);
-            std::vector<std::string> files2(testList.begin() + i + gallery_size, testList.begin() + i + gallery_size * 2);
-
-            auto isSame = testList[i + gallery_size * 2] == "1";
-
-            functor(files1, files2, isSame, progress);
-        }
-    }
-
-    int gallery_size;
-    int pair_size;
-    int total_items;
-
-private:
-    std::vector<std::string> testList;
-};
 
 void
 InitializeImplementation(std::shared_ptr<Interface>& implPtr)
@@ -68,182 +25,119 @@ CvImageToImageData(const cv::Mat& image)
     return imageData;
 }
 
-double
-GetThreshold(double fpr_divider, std::vector<double>& diff_scores, int& borderIndex)
+void
+PrintTemplate(const std::vector<EyePair>& eyeCoordinates, const std::vector<uint8_t>& features)
 {
-    std::sort(diff_scores.begin(), diff_scores.end());
-    std::reverse(diff_scores.begin(), diff_scores.end());
-    borderIndex = int(diff_scores.size() / fpr_divider);
-    double borderScore = diff_scores[borderIndex];
-    return borderScore;
+    EyePair eyePair = eyeCoordinates[0];
+        
+    std::cout << "Test output: " << std::endl;
+    std::cout << "\t" << int(eyePair.xleft) << " " << int(eyePair.yleft) << " " << int(eyePair.xright) << " " << int(eyePair.yright) << std::endl;
+    auto f = (float *)features.data();
+    std::cout << "\t";
+    for (int i=0; i < 10; ++i)
+        std::cout << f[i] << " ";
+    std::cout << std::endl;
+
+    // std::ofstream outFile("/home/administrator/nist/debug/features.txt");
+    // for (int i=0; i < 512; i++) outFile << f[i] << "\n";
 }
 
-double
-CalculateTPR(double fpr_divider, std::vector<double>& diff_scores, std::vector<double>& same_scores)
+int
+GetNumComparisons(int numFeatures)
 {
-    int borderIndex;
-    double borderScore = GetThreshold(fpr_divider, diff_scores, borderIndex);
-
-    std::cout << "Threshold: " << borderScore << " (at index " << borderIndex << ")" << std::endl;
-
-    double tp = 0;
-    for (int i = 0; i < same_scores.size(); ++i)
+    int comps = 0;
+    for (int i = numFeatures; i > 0; i--)
     {
-        if (same_scores[i] > borderScore) ++tp;
+        comps += i;
     }
-
-    return tp / same_scores.size();
+    return comps;
 }
 
 void
-CalculateLandmarksAccuracy(std::map<std::string, std::vector<int>>& landmarksList, std::map<std::string, std::vector<int>>& landmarksDetection)
-{
-    if (landmarksDetection.size() == 0) {
-        std::cout << "No landmarks detected - not calculating accuracy" << std::endl;
-        return;
-    }
-
-    std::cout << "Calculating landmarks detections over " << landmarksDetection.size() << " images... ";
-    std::vector<double> diffs;
-    for (const auto& kv : landmarksDetection) {
-        auto file = kv.first;
-        auto landmarksDetected = kv.second;
-        auto landmarksGT = landmarksList[file];
-        double diff = 
-            std::sqrt(std::pow(landmarksDetected[0] - landmarksGT[0], 2) + std::pow(landmarksDetected[1] - landmarksGT[1], 2)) +
-            std::sqrt(std::pow(landmarksDetected[2] - landmarksGT[2], 2) + std::pow(landmarksDetected[3] - landmarksGT[3], 2)) ; 
-        diff /= 2.0;
-        diffs.push_back(diff);
-    }
-
-    auto maxDiff = *std::max_element(diffs.begin(), diffs.end());
-
-    //cv::Mat testMat = cv::Mat(diffs);
-    cv::Scalar mean, stddev;
-    cv::meanStdDev(diffs, mean, stddev);
-
-    std::cout << "Landmarks error: " << mean[0] << " +- " << stddev[0] << " (max: " << maxDiff << ")" << std::endl;
-}
-
-void
-OutputFailedPairs(const TestIterator& test_iterator, const std::vector<double>& scores, std::vector<double>& diff_scores)
-{
-    std::ofstream f;
-    f.open("/home/administrator/nist/frvt/debug/false_positives.txt");
-
-    int borderIndex;
-    double threshold = GetThreshold(1000, diff_scores, borderIndex);
-
-    f << "Threshold: " << threshold << std::endl;
-
-    int pair = 0;
-    test_iterator.Loop([&] (const std::vector<std::string>& files1, const std::vector<std::string>& files2, bool isSame, int progress)
-    {
-        if (isSame && scores[pair] <= threshold)
-        {
-            f << "Same score: " << scores[pair] << std::endl;
-            for (const auto& p : files1) f << p << " "; f << std::endl;
-            for (const auto& p : files2) f << p << " "; f << std::endl;
-        }
-        if (!isSame && scores[pair] >= threshold)
-        {
-            f << "Diff score: " << scores[pair] << std::endl;
-            for (const auto& p : files1) f << p << " "; f << std::endl;
-            for (const auto& p : files2) f << p << " "; f << std::endl;
-        } 
-        ++pair;
-    });
-
-    f.close();
-}
-
-std::vector<uint8_t>
-GetTemplate(std::shared_ptr<Interface>& implPtr, std::vector<std::string> files, std::map<std::string, std::vector<int>>& landmarksDetection)
-{
-    std::vector<Image> images;
-    for (const std::string& file : files) {
-        auto path = "/home/administrator/face_data/benchmarks/original/" + file;
-        cv::Mat image = cv::imread(path);
-        cv::cvtColor(image, image, cv::COLOR_BGR2RGB); // opencv reads images as BGR
-        if(!image.data) throw std::runtime_error("Could not open or find the image");
-        Image imageData = CvImageToImageData(image);
-        images.push_back(imageData);
-    }
-    
-    std::vector<uint8_t> features;
-    std::vector<EyePair> eyeCoordinates;
-
-    implPtr->createTemplate(images, TemplateRole::Enrollment_11, features, eyeCoordinates);
-
-    if (files.size() == eyeCoordinates.size()) {
-        for (int i = 0; i < files.size(); ++i) {
-            EyePair eyePair = eyeCoordinates[i];
-            landmarksDetection[files[i]] = {int(eyePair.xleft), int(eyePair.yleft), int(eyePair.xright), int(eyePair.yright)};
-        }
-    }
-
-    return features;
-}
-
-void
-RunVggTest(const std::string& list_path, const std::string& landmarks_list_path)
+RunTest(const std::string& list_path)
 {
     // Load test list
 
-    TestIterator test_iterator(list_path);
-
-    // Load landmarks data
-
-    std::map<std::string, std::vector<int>> landmarksList = ReadLandmarksList(landmarks_list_path);
-    std::map<std::string, std::vector<int>> landmarksDetection;
-    std::cout << "Loaded landmarks for " << landmarksList.size() << " images" << std::endl;
+    auto testList = ReadTestList(list_path);
+    // std::vector<std::string> testList(testList_.begin(), testList_.begin()+100);
 
     // Create FRVT implementation
 
-    auto implPtr = Interface::getImplementation();
+    auto implPtr = FRVT_11::Interface::getImplementation();
     InitializeImplementation(implPtr);
 
-    // Loop over pairs
+    // Collections
+
+    std::vector<std::vector<uint8_t>> collectedFeatures;
+    std::vector<std::vector<EyePair>> collectedEyes;
+    
+    // Extract features
+
+    ProgressBarPrinter progress_bar("Extracting features", testList.size() / 2);
+    
+    for (int progress=0; progress < testList.size(); progress+=2)
+    {
+        if (progress == 0) progress_bar.Print(progress);
+
+        const std::string& file = testList[progress];
+        auto path = "/home/administrator/face_data/benchmarks/original/" + file;
+
+        cv::Mat image = LoadImage(path);
+        FRVT::Image imageData = CvImageToImageData(image);
+
+        std::vector<uint8_t> features;
+        std::vector<EyePair> eyeCoordinates;
+
+        implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
+
+        collectedFeatures.push_back(features);
+        collectedEyes.push_back(eyeCoordinates);
+
+        // PrintTemplate(eyeCoordinates, features);
+
+        if (progress == 0) progress_bar.RestartTime();
+        if (progress > 0) progress_bar.Print(progress / 2);
+    }
+
+    // Compare
+
+    ProgressBarPrinter similaritiesProgressBar("Calculating similarities", GetNumComparisons(collectedFeatures.size()), 100);
+    int progress = 0;
 
     std::vector<double> same_scores;
     std::vector<double> diff_scores;
     std::vector<double> all_scores;
-
-    ProgressBarPrinter progress_bar(test_iterator.total_items, test_iterator.gallery_size * 2);
-
-    test_iterator.Loop([&] (const std::vector<std::string>& files1, const std::vector<std::string>& files2, bool isSame, int progress)
+    
+    for (int i = 0; i < collectedFeatures.size(); i++)
     {
-        if (progress == 0) progress_bar.Print(progress);
+        auto features1 = collectedFeatures[i];
+        for (int j = i + 1; j < collectedFeatures.size(); j++)
+        {
+            if (progress == 0) similaritiesProgressBar.Print(progress);
 
-        std::vector<uint8_t> features1 = GetTemplate(implPtr, files1, landmarksDetection);
-        std::vector<uint8_t> features2 = GetTemplate(implPtr, files2, landmarksDetection);
+            auto features2 = collectedFeatures[j];
+            double score = 0;
+            implPtr->matchTemplates(features1, features2, score);
 
-        double score = 0;
-        implPtr->matchTemplates(features1, features2, score);
+            bool isSame = testList[i * 2 + 1] == testList[j * 2 + 1];
+            if (isSame) same_scores.push_back(score);
+            else diff_scores.push_back(score);
+            all_scores.push_back(score);
 
-        if (isSame) same_scores.push_back(score);
-        else diff_scores.push_back(score);
-        all_scores.push_back(score);
-
-        if (progress == 0) progress_bar.RestartTime();
-        if (progress > 0) progress_bar.Print(progress);
-    });
+            if (progress == 0) similaritiesProgressBar.RestartTime();
+            if (progress > 0) similaritiesProgressBar.Print(progress);
+            progress++;
+        }
+    }
 
     // Output TPR
 
     std::cout << std::endl;
     std::cout << "TPR @ FPR 1:" << 10 << " = " << CalculateTPR(10, diff_scores, same_scores) << std::endl;
     std::cout << "TPR @ FPR 1:" << 100 << " = " << CalculateTPR(100, diff_scores, same_scores) << std::endl;
-    std::cout << "TPR @ FPR 1:" << 1000 << " = " << CalculateTPR(1000, diff_scores, same_scores) << std::endl;
-
-    // Landmarks accuracy
-
-    CalculateLandmarksAccuracy(landmarksList, landmarksDetection);
-
-    // Dump analysis
-
-    OutputFailedPairs(test_iterator, all_scores, diff_scores);
+    // std::cout << "TPR @ FPR 1:" << 1000 << " = " << CalculateTPR(1000, diff_scores, same_scores) << std::endl;
 }
+
 
 int
 main(int argc, char* argv[])
@@ -256,9 +150,7 @@ main(int argc, char* argv[])
 
     std::cout << "List path: " << listPath << std::endl;
 
-    std::string landmarksListPath = "/home/administrator/face_data/benchmarks/vgg_landmarks.txt";
-    
-    RunVggTest(listPath, landmarksListPath);
+    RunTest(listPath);
 
-	return 0;
+    return 0;
 }
