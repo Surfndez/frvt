@@ -20,9 +20,9 @@ struct ImageCrop
         h = rect.y2 - rect.y1;
         w = rect.x2 - rect.x1;
         n = std::max(h, w);
-        int cropX = rect.x1 + w*0.5 - n*0.5;
-        int cropY = rect.y1 + h*0.5 - n*0.5;
-        Rect cropBox(cropX, cropY, cropX + n, cropY + n, rect.score);
+        float cropX = rect.x1 + w*0.5 - n*0.5;
+        float cropY = rect.y1 + h*0.5 - n*0.5;
+        RectF cropBox(cropX, cropY, cropX + n, cropY + n, rect.score);
 
         // Compute crop borders
 
@@ -39,8 +39,8 @@ struct ImageCrop
         dest_xend = face_width;
         dest_yend = face_height;
 
-        int img_width = image.cols;
-        int img_height = image.rows;
+        float img_width = image.cols;
+        float img_height = image.rows;
 
         if (img_xend > img_width) {
             dest_xend = face_width - (img_xend - img_width);
@@ -65,7 +65,8 @@ struct ImageCrop
         cropFromOrig.copyTo(cropped_img(roiInNew));
         image = cropped_img;
 
-        cv::resize(image, image, cv::Size(INPUT_SIZE, INPUT_SIZE), 0, 0, cv::INTER_LINEAR);
+        auto interpolation = image.cols * image.rows < INPUT_SIZE^2 ? cv::INTER_LINEAR : cv::INTER_AREA;
+        cv::resize(image, image, cv::Size(INPUT_SIZE, INPUT_SIZE), 0, 0, interpolation);
 
         croppedImage = image;
     }
@@ -74,18 +75,18 @@ struct ImageCrop
     int w;
     int n;
 
-    int img_xbegin;
-    int img_ybegin;
-    int img_xend;
-    int img_yend;
+    float img_xbegin;
+    float img_ybegin;
+    float img_xend;
+    float img_yend;
 
-    int face_width;
-    int face_height;
+    float face_width;
+    float face_height;
 
-    int dest_xbegin;
-    int dest_ybegin;
-    int dest_xend;
-    int dest_yend;
+    float dest_xbegin;
+    float dest_ybegin;
+    float dest_xend;
+    float dest_yend;
 
     cv::Mat croppedImage;
 };
@@ -145,7 +146,9 @@ DnetLandmarksDetector::DnetLandmarksDetector(const std::string &configDir)
 {
     std::string modelPath = configDir + DNET_MODEL_NAME;
 
-    mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(modelPath));
+    mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(
+        modelPath, {"d_net_input"}, {"lm_output/BiasAdd"})
+    );
 }
 
 DnetLandmarksDetector::~DnetLandmarksDetector() {}
@@ -168,13 +171,12 @@ DnetLandmarksDetector::DoDetect(cv::Mat& image, const Rect &face) const
     image = NormalizeImage(imageCrop.croppedImage);
 
     // Perform inference
-    auto output = mModelInference->Infer(image);
-    const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
-    //float* output_landmarks = static_cast<float*>(TF_TensorData(output[0].get()));
+    auto output = mTensorFlowInference->Infer(image);
+    float* output_landmarks = static_cast<float*>(TF_TensorData(output[0].get()));
 
     // Process output
 
-    std::vector<int> landmarks = AdjustLandmarks(imageCrop, result);
+    std::vector<int> landmarks = AdjustLandmarks(imageCrop, output_landmarks);
 
     return landmarks;
 }
