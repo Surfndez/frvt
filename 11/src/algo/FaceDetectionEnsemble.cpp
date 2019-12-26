@@ -9,7 +9,8 @@ using namespace FRVT_11;
 FaceDetectionEnsemble::FaceDetectionEnsemble(const std::string &configDir)
 {
     mDetectors = {
-        std::make_shared<SsdFaceDetector>(configDir, "/mobilenet_v3", 128)
+        std::make_shared<SsdFaceDetector>(configDir, "/ssdlite_mobilenet_v3_large_416x416_fddb_wider_tasqai_noface2_filter10_0-400000", 416),
+        // std::make_shared<SsdFaceDetector>(configDir, "/ssdlite_mobilenet_v3_large_224x224_fddb_wider_tasqai_noface2_filter20_steps_0-300000", 224),
     };
 }
 
