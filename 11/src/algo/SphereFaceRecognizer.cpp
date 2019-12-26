@@ -1,15 +1,7 @@
 #include "SphereFaceRecognizer.h"
 
-#include <algorithm>
-// #include <iostream>
-// #include <fstream>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
-
-#include <iostream>
-#include <chrono>
-#include <ratio>
-#include <thread>
 
 using namespace FRVT_11;
 
@@ -128,7 +120,7 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
 
 SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
-    std::string sphereModelPath = configDir + "/sphereface-sphere_v0_108_dm100_se_arcface_listv9_03-75000_features";
+    std::string sphereModelPath = configDir + "/sphereface_drop-sphere_v0_108_dm100_se_arcface_listv9_obj_04-100000_features";
     mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(sphereModelPath));
 }
 
@@ -138,8 +130,6 @@ std::vector<float>
 SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& landmarks) const
 {
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
-
-    //std::cout << "1: h w : " << image.rows << " " << image.cols << std::endl;
     
     image = NormalizeImage(image, landmarks);
 
@@ -153,23 +143,21 @@ SphereFaceRecognizer::Infer(const ImageData& imageData, const std::vector<int>& 
     auto output = mModelInference ->Infer(image);
     const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
     cv::Mat featuresMat_1(512, 1, CV_32F, result);
-    featuresMat_1 /= cv::norm(featuresMat_1);
 
     // infer on flipped image
     cv::flip(image, image, 1);
     auto output_2 = mModelInference ->Infer(image);
     const auto result1 = output_2->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
     cv::Mat featuresMat_2(512, 1, CV_32F, result1);
-    featuresMat_2 /= cv::norm(featuresMat_2);
 
     // Average and re-norm features
-    featuresMat_1 = (featuresMat_1 + featuresMat_2) / 2;
-    featuresMat_1 /= cv::norm(featuresMat_1);
+    cv::Mat featuresMat = (featuresMat_1 + featuresMat_2) / 2;
+    featuresMat /= cv::norm(featuresMat);
 
     // convert to vector (function should be changed to return cv::Mat)
     std::vector<float> features(512);
     for (int i = 0; i < 512; ++i) {
-        features[i] = featuresMat_1.at<float>(i, 0);
+        features[i] = featuresMat.at<float>(i, 0);
     }
 
     return features;
