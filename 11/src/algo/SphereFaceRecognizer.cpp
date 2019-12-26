@@ -24,9 +24,8 @@ SphereFaceRecognizer::Infer(const cv::Mat& image) const
     const auto result1 = output_2->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
     cv::Mat featuresMat_2(512, 1, CV_32F, result1);
 
-    // Average and re-norm features
+    // Average features
     cv::Mat featuresMat = (featuresMat_1 + featuresMat_2) / 2;
-    featuresMat /= cv::norm(featuresMat);
 
     // convert to vector (function should be changed to return cv::Mat)
     std::vector<float> features(512);

@@ -12,15 +12,12 @@
 #include <cstdlib>
 #include <stdlib.h>
 #include <stdexcept>
-
-#include <opencv2/core.hpp>
+// #include <fstream>
 
 #include "nullimplfrvt11.h"
 #include "../algo/FaceDetectionEnsemble.h"
 #include "../algo/DnetLandmarksDetector.h"
 #include "../algo/SphereFaceRecognizer.h"
-
-#include "../algo/TimeMeasurement.h"
 
 using namespace std;
 using namespace FRVT;
@@ -58,12 +55,12 @@ AveragePoolOnTemplates(const std::vector<std::vector<float>>& templates)
 ReturnStatus
 NullImplFRVT11::initialize(const std::string &configDir)
 {
-    putenv("TF_CPP_MIN_LOG_LEVEL=3"); // Disable TensorFlow logs
     putenv("OMP_NUM_THREADS=1"); // Disable MKL muilti-threading
     cv::setNumThreads(0); // Disable OpenCV use of TBB
 
     mFaceDetector = std::make_shared<FaceDetectionEnsemble>(configDir);
     mLandmarksDetector = std::make_shared<DnetLandmarksDetector>(configDir);
+    mImageNormalizer = std::make_shared<ImageNormalizer>();
     mFaceRecognizer = std::make_shared<SphereFaceRecognizer>(configDir);
 
     return ReturnStatus(ReturnCode::Success);
@@ -94,6 +91,8 @@ NullImplFRVT11::safeCreateTemplate(
         std::vector<uint8_t> &templ,
         std::vector<EyePair> &eyeCoordinates)
 {
+    // std::ofstream dataFile("flow_data.txt", std::ios::out | std::ios::app);
+
     std::vector<std::vector<float>> templates;
 
     for(const Image &image: faces) {
@@ -101,32 +100,30 @@ NullImplFRVT11::safeCreateTemplate(
         ImageData imageData(image.data, image.width, image.height, channels);
 
         try {
-            // auto t1 = TimeMeasurement();
             std::vector<Rect> rects = mFaceDetector->Detect(imageData);
-            // std::cout << "Face detection "; t1.Test();
             if (rects.size() == 0) continue;
             const Rect& rect = rects[0]; // should be only one face in image
-            // std::cout << "\tRectangle: " << rect.x1 << " " << rect.y1 << " " << rect.x2 << " " << rect.y2 << std::endl;
+            // dataFile << "Rectangle: " << rect.x1 << " " << rect.y1 << " " << rect.x2 << " " << rect.y2 << std::endl;
 
-            // auto t2 = TimeMeasurement();
             std::vector<int> landmarks = mLandmarksDetector->Detect(imageData, rect);
-            // std::cout << "Landmarks detection "; t2.Test();
             if (landmarks.size() == 0) continue;
             eyeCoordinates.push_back(EyePair(true, true, landmarks[0], landmarks[1], landmarks[2], landmarks[3]));
+            // dataFile << "Landmarks:";
+            // for (int i = 0; i < 10; i++) dataFile << " " << landmarks[i];
+            // dataFile << std::endl;
 
-            // auto t3 = TimeMeasurement();
-            std::vector<float> features = mFaceRecognizer->Infer(imageData, landmarks);
-            // std::cout << "Face recognition "; t3.Test();
-            // std::cout << "\tFeatures: ";
-            // for (int i=0; i < 5; i++) std::cout << features[i] << " ";
-            // std::cout << std::endl;
+            auto normalizedImage = mImageNormalizer->normalize(imageData, landmarks);
+
+            std::vector<float> features = mFaceRecognizer->Infer(normalizedImage);
+            // dataFile << "Features:";
+            // for (int i=0; i < 25; i++) dataFile << " " << features[i];
+            // dataFile << std::endl;
 
             templates.push_back(std::vector<float>(features.begin(), features.begin()+512));
-            //templates.push_back(std::vector<float>(features.begin()+512, features.end()));
         }
         catch (const std::exception& e) {
             // Nothing to do for exceptions... move on to the next face...
-            std::cout << e.what() << std::endl;
+            // std::cout << e.what() << std::endl;
         }
     }
 
@@ -150,6 +147,8 @@ NullImplFRVT11::matchTemplates(
     else {
         cv::Mat f1(512, 1, CV_32F, (float *)verifTemplate.data());
         cv::Mat f2(512, 1, CV_32F, (float *)enrollTemplate.data());
+        f1 /= cv::norm(f1);
+        f2 /= cv::norm(f2);
         similarity = 300 * (3 - cv::norm(f1 - f2));
     }
     return ReturnStatus(ReturnCode::Success);
