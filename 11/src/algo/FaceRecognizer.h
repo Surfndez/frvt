@@ -1,16 +1,14 @@
 #ifndef FACERECOGNIZER_H_
 #define FACERECOGNIZER_H_
 
-#include <vector>
-
-#include "ImageData.h"
+#include <opencv2/core.hpp>
 
 namespace FRVT_11 {
     class FaceRecognizer {
 public:
     virtual ~FaceRecognizer() {}
 
-    virtual std::vector<float> Infer(const ImageData& imageData, const std::vector<int>& landmarks) const = 0;
+    virtual std::vector<float> Infer(const cv::Mat& image) const = 0;
 };
 }
 
