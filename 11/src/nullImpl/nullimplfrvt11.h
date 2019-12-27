@@ -15,6 +15,7 @@
 #include "../algo/FaceDetector.h"
 #include "../algo/LandmarksDetector.h"
 #include "../algo/ImageNormalizer.h"
+#include "../algo/FaceClassifier.h"
 #include "../algo/FaceRecognizer.h"
 
 /*
@@ -60,6 +61,7 @@ private:
     std::shared_ptr<FaceDetector> mFaceDetector;
     std::shared_ptr<LandmarksDetector> mLandmarksDetector;
     std::shared_ptr<ImageNormalizer> mImageNormalizer;
+    std::shared_ptr<FaceClassifier> mFaceClassifier;
     std::shared_ptr<FaceRecognizer> mFaceRecognizer;
 };
 }

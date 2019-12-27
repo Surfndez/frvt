@@ -61,6 +61,7 @@ NullImplFRVT11::initialize(const std::string &configDir)
     mFaceDetector = std::make_shared<FaceDetectionEnsemble>(configDir);
     mLandmarksDetector = std::make_shared<DnetLandmarksDetector>(configDir);
     mImageNormalizer = std::make_shared<ImageNormalizer>();
+    mFaceClassifier = std::make_shared<FaceClassifier>();
     mFaceRecognizer = std::make_shared<SphereFaceRecognizer>(configDir);
 
     return ReturnStatus(ReturnCode::Success);
@@ -119,7 +120,10 @@ NullImplFRVT11::safeCreateTemplate(
             // for (int i=0; i < 25; i++) dataFile << " " << features[i];
             // dataFile << std::endl;
 
-            templates.push_back(std::vector<float>(features.begin(), features.begin()+512));
+            bool classifyResult = mFaceClassifier->classify(features);
+
+            if (classifyResult)
+                templates.push_back(std::vector<float>(features.begin(), features.begin()+512));
         }
         catch (const std::exception& e) {
             // Nothing to do for exceptions... move on to the next face...
