@@ -1,5 +1,7 @@
 #include <fstream>
 #include <iostream>
+#include <iomanip>
+#include <limits>
 
 #include "frvt11.h"
 #include "TestUtils.h"
@@ -87,7 +89,7 @@ PrintTemplate(const std::vector<EyePair>& eyeCoordinates, const std::vector<uint
     landmarks_file << " " << int(eyePair.xleft) << " " << int(eyePair.yleft) << " " << int(eyePair.xright) << " " << int(eyePair.yright) << std::endl;
         
     auto f = (float *)features.data();
-    for (int i=0; i < 512; ++i) features_file << f[i] << " ";
+    for (int i=0; i < 512; ++i) features_file << std::setprecision (std::numeric_limits<double>::max_digits10) << f[i] << " ";
     features_file << std::endl;
 }
 
