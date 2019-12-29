@@ -11,6 +11,8 @@ using namespace FRVT_11;
 
 /************************************/
 /*********** Sanity tests ***********/
+/************************************/
+
 void RunSanityTests()
 {
     std::cout << "Running tests..." << std::endl;
@@ -21,7 +23,7 @@ void test_similarity_calculation()
     std::cout << "\tRunnnig: test_similarity_calculation... ";
 
     auto implPtr = FRVT_11::Interface::getImplementation();
-    std::ifstream infile("test_features_similarity.txt");
+    std::ifstream infile("../test_data/test_features_similarity.txt");
     
     float expectedScore;
     infile  >> expectedScore;
@@ -53,6 +55,8 @@ void test_similarity_calculation()
 
     std::cout << (int(score) == int(expectedScore) ? "Pass" : "Fail") << std::endl;
 }
+
+/****************************************/
 /*********** End sanity tests ***********/
 /****************************************/
 
