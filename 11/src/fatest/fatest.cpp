@@ -4,21 +4,62 @@
 #include "frvt11.h"
 #include "TestUtils.h"
 #include "ProgressBar.h"
-#include <opencv2/opencv.hpp>
-
+#include "SanityTests.h"
 
 using namespace FRVT;
 using namespace FRVT_11;
 
-#include <iostream>
-#include <chrono>
-#include <ratio>
-#include <thread>
+/************************************/
+/*********** Sanity tests ***********/
+void RunSanityTests()
+{
+    std::cout << "Running tests..." << std::endl;
+    test_similarity_calculation();
+}
+void test_similarity_calculation()
+{
+    std::cout << "\tRunnnig: test_similarity_calculation... ";
+
+    auto implPtr = FRVT_11::Interface::getImplementation();
+    std::ifstream infile("test_features_similarity.txt");
+    
+    float expectedScore;
+    infile  >> expectedScore;
+
+    std::vector<float> f1;
+    std::vector<float> f2;
+
+    float item;
+    for (int i = 0; i < 512; i++) {
+        infile >> item;
+        f1.push_back(item);
+    }
+    for (int i = 0; i < 512; i++) {
+        infile >> item;
+        f2.push_back(item);
+    }
+
+    const uint8_t* bytes1 = reinterpret_cast<const uint8_t*>((const uint8_t*)f1.data());
+    const uint8_t* bytes2 = reinterpret_cast<const uint8_t*>((const uint8_t*)f2.data());
+
+    std::vector<uint8_t> templ1(512 * sizeof(float));
+    std::vector<uint8_t> templ2(512 * sizeof(float));
+
+    memcpy(templ1.data(), bytes1, 512 * sizeof(float));
+    memcpy(templ2.data(), bytes2, 512 * sizeof(float));
+
+    double score;
+    implPtr->matchTemplates(templ1, templ2, score);
+
+    std::cout << (int(score) == int(expectedScore) ? "Pass" : "Fail") << std::endl;
+}
+/*********** End sanity tests ***********/
+/****************************************/
 
 void
 InitializeImplementation(std::shared_ptr<Interface>& implPtr)
 {
-    implPtr->initialize("/home/administrator/nist/frvt/11/config");
+    implPtr->initialize("/home/administrator/nist2/frvt/11/config");
 }
 
 Image
@@ -35,18 +76,15 @@ CvImageToImageData(const cv::Mat& image)
 void
 PrintTemplate(const std::vector<EyePair>& eyeCoordinates, const std::vector<uint8_t>& features)
 {
-    EyePair eyePair = eyeCoordinates[0];
-        
-    std::cout << "Test output: " << std::endl;
-    std::cout << "\t" << int(eyePair.xleft) << " " << int(eyePair.yleft) << " " << int(eyePair.xright) << " " << int(eyePair.yright) << std::endl;
-    auto f = (float *)features.data();
-    std::cout << "\t";
-    for (int i=0; i < 10; ++i)
-        std::cout << f[i] << " ";
-    std::cout << std::endl;
+    std::ofstream landmarks_file("fatest_landmarks.txt", std::ios::out | std::ios::app);
+    std::ofstream features_file("fatest_features.txt", std::ios::out | std::ios::app);
 
-    // std::ofstream outFile("/home/administrator/nist/debug/features.txt");
-    // for (int i=0; i < 512; i++) outFile << f[i] << "\n";
+    EyePair eyePair = eyeCoordinates[0];
+    landmarks_file << " " << int(eyePair.xleft) << " " << int(eyePair.yleft) << " " << int(eyePair.xright) << " " << int(eyePair.yright) << std::endl;
+        
+    auto f = (float *)features.data();
+    for (int i=0; i < 512; ++i) features_file << f[i] << " ";
+    features_file << std::endl;
 }
 
 int
@@ -59,7 +97,6 @@ GetNumComparisons(int numFeatures)
     }
     return comps;
 }
-
 
 void
 RunTest(const std::string& list_path)
@@ -76,9 +113,9 @@ RunTest(const std::string& list_path)
 
     // Collections
 
+    std::vector<std::string> collectedFiles;
     std::vector<std::vector<uint8_t>> collectedFeatures;
     std::vector<std::vector<EyePair>> collectedEyes;
-
     
     // Extract features
 
@@ -89,21 +126,21 @@ RunTest(const std::string& list_path)
         if (progress == 0) progress_bar.Print(progress);
 
         const std::string& file = testList[progress];
-        auto path = "/home/administrator/face_data/benchmarks/original" + file;
+        auto path = "/home/administrator/face_data/benchmarks/original/" + file;
 
         cv::Mat image = LoadImage(path);
         FRVT::Image imageData = CvImageToImageData(image);
 
-
-       std::vector<uint8_t> features;
+        std::vector<uint8_t> features;
         std::vector<EyePair> eyeCoordinates;
 
         implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
 
+        collectedFiles.push_back(file);
         collectedFeatures.push_back(features);
         collectedEyes.push_back(eyeCoordinates);
 
-        // PrintTemplate(eyeCoordinates, features);
+        PrintTemplate(eyeCoordinates, features);
 
         if (progress == 0) progress_bar.RestartTime();
         if (progress > 0) progress_bar.Print(progress / 2);
@@ -117,6 +154,8 @@ RunTest(const std::string& list_path)
     std::vector<double> same_scores;
     std::vector<double> diff_scores;
     std::vector<double> all_scores;
+
+    std::ofstream scores_file("fatest_scores.txt", std::ios::out);
     
     for (int i = 0; i < collectedFeatures.size(); i++)
     {
@@ -133,6 +172,8 @@ RunTest(const std::string& list_path)
             if (isSame) same_scores.push_back(score);
             else diff_scores.push_back(score);
             all_scores.push_back(score);
+
+            scores_file << collectedFiles[i] << " " << collectedFiles[j] << " " << score << std::endl;
 
             if (progress == 0) similaritiesProgressBar.RestartTime();
             if (progress > 0) similaritiesProgressBar.Print(progress);
@@ -152,16 +193,13 @@ RunTest(const std::string& list_path)
 int
 main(int argc, char* argv[])
 {
-    char *s = "TF_CPP_MIN_LOG_LEVEL=3";
-    putenv(s); // Disable TensorFlow logs
-     char *a = "OMP_NUM_THREADS=1";
-    putenv(a); // Disable MKL muilti-threading
-
     if (argc == 1) {
         std::cout << "Need test list path" << std::endl;
         return 1;
     }
     std::string listPath = argv[1];
+
+    RunSanityTests();
 
     std::cout << "List path: " << listPath << std::endl;
 
