@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.0)
 
-set (MODULE_NAME frvt_11_IntelResearch_000)
+set (MODULE_NAME frvt_11_IntelResearch_001)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-write-strings")
 
