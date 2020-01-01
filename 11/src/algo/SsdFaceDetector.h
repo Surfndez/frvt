@@ -10,7 +10,9 @@ public:
     SsdFaceDetector(const std::string &configDir, const std::string& modelName, int inputSize);
     ~SsdFaceDetector() override;
 
-    virtual std::vector<Rect> Detect(const ImageData &image) const override;
+    virtual std::vector<Rect> Detect(const ImageData& image) const override;
+
+    virtual std::vector<Rect> Detect(const cv::Mat& image) const override;
 
 private:
     std::shared_ptr<OpenVinoInference> mModelInference;

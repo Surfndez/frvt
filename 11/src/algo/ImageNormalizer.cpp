@@ -91,29 +91,8 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
     // crop
     cv::Mat cropped = CropImage(image, landmarks);
 
-    // std::cout << "\tCropped size: " << cropped.rows << " " << cropped.cols << std::endl;
-
     // resize
     cv::resize(cropped, cropped, cv::Size(128, 128), 0, 0, cv::INTER_AREA);
-
-    // to BGR
-    cv::cvtColor(cropped, cropped, cv::COLOR_RGB2BGR);
-
-    // double min_i, max_i;
-    // cv::minMaxLoc(cropped, &min_i, &max_i);
-    // std::cout << "\tmin-max " << min_i << "-" << max_i << std::endl;
-    
-    cropped.convertTo(cropped, CV_32FC3);
-    cropped /= 255;
-    cropped -= cv::Scalar(0.5, 0.5, 0.5);
-
-    // double min, max;
-    // cv::minMaxLoc(cropped, &min, &max);
-   //  std::cout << "\tmin-max " << min << "-" << max << std::endl;
-
-    // cv::Scalar mean, stddev;
-    // cv::meanStdDev (cropped, mean, stddev);
-   //  std::cout << "\tMean-Std: " << mean << " " << stddev << std::endl;
 
     return cropped;
 }
@@ -121,15 +100,7 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
 cv::Mat
 ImageNormalizer::normalize(const ImageData& imageData, const std::vector<int>& landmarks) const
 {
-    cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
-    
+    cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());    
     image = NormalizeImage(image, landmarks);
-
-    // cv::Mat flat = image.reshape(1, image.cols*image.rows*image.channels());
-    // std::vector<float> vec = image.isContinuous()? flat : flat.clone();
-    // std::ofstream fout("/home/administrator/nist/debug/data.dat", std::ios::out | std::ios::binary);
-    // fout.write((char*)&vec[0], vec.size() * 4);
-    // fout.close();
-
     return image;
 }

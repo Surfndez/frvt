@@ -3,11 +3,18 @@
 
 #include <vector>
 
+#include "FaceDetector.h"
+
 namespace FRVT_11 {
     class FaceClassifier
     {
-    public:
-        bool classify(const std::vector<float>& features) const;
+public:
+    FaceClassifier(const std::string &configDir);
+
+    bool classify(const cv::Mat& image, const std::vector<float>& features) const;
+
+private:
+    std::shared_ptr<FaceDetector> mFaceDetector;
 };
 }
 

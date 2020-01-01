@@ -17,10 +17,15 @@ SsdFaceDetector::~SsdFaceDetector() {}
 std::vector<Rect>
 SsdFaceDetector::Detect(const ImageData &imageData) const
 {
-    // Prepare image
-
     cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
-    image.convertTo(image, CV_32FC3);
+    return this->Detect(image);
+}
+
+std::vector<Rect>
+SsdFaceDetector::Detect(const cv::Mat& constImage) const
+{
+    cv::Mat image;
+    constImage.convertTo(image, CV_32FC3);
 
     float ratioH = float(image.rows);
     float ratioW = float(image.cols);

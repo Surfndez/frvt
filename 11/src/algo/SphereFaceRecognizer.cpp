@@ -1,6 +1,22 @@
 #include "SphereFaceRecognizer.h"
 
+#include <opencv2/imgproc.hpp>
+
 using namespace FRVT_11;
+
+cv::Mat
+NormalizeImage(const cv::Mat& image)
+{
+    cv::Mat inferImage;
+
+    // to BGR
+    cv::cvtColor(image, inferImage, cv::COLOR_RGB2BGR);
+    
+    inferImage.convertTo(inferImage, CV_32FC3);
+    inferImage /= 255;
+    inferImage -= cv::Scalar(0.5, 0.5, 0.5);
+    return inferImage;
+}
 
 SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
@@ -11,8 +27,10 @@ SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 SphereFaceRecognizer::~SphereFaceRecognizer() {}
 
 std::vector<float>
-SphereFaceRecognizer::Infer(const cv::Mat& image) const
+SphereFaceRecognizer::Infer(const cv::Mat& constImage) const
 {
+    cv::Mat image = NormalizeImage(constImage);
+
     // infer on original image
     auto output = mModelInference ->Infer(image);
     const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();

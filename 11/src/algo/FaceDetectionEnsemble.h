@@ -12,6 +12,8 @@ public:
 
     virtual std::vector<Rect> Detect(const ImageData &image) const override;
 
+    virtual std::vector<Rect> Detect(const cv::Mat& constImage) const override { std::logic_error{"Function not yet implemented."}; }
+
 private:
     std::vector<std::shared_ptr<FaceDetector>> mDetectors;
 };
