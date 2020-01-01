@@ -11,7 +11,7 @@ namespace FRVT_11 {
 public:
     FaceClassifier(const std::string &configDir);
 
-    bool classify(const cv::Mat& image, const std::vector<float>& features) const;
+    bool classify(const cv::Mat& image, std::vector<int> landmarks, const std::vector<float>& features) const;
 
 private:
     std::shared_ptr<FaceDetector> mFaceDetector;
