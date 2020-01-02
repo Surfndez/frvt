@@ -13,7 +13,7 @@ file(GLOB test_src "*.cpp")
 
 # FRVT lib
 add_library( frvt SHARED IMPORTED PUBLIC )
-set_target_properties( frvt PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/libfrvt_11_IntelResearch_000.so)
+set_target_properties( frvt PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/libfrvt_11_IntelResearch_001.so)
 
 # Build the executable
 add_executable (fa_test ${test_src})
