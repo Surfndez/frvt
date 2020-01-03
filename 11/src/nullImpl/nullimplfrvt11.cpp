@@ -12,7 +12,7 @@
 #include <cstdlib>
 #include <stdlib.h>
 #include <stdexcept>
-// #include <fstream>
+#include <fstream>
 
 #include "nullimplfrvt11.h"
 #include "../algo/FaceDetectionEnsemble.h"
@@ -61,7 +61,7 @@ NullImplFRVT11::initialize(const std::string &configDir)
     mFaceDetector = std::make_shared<FaceDetectionEnsemble>(configDir);
     mLandmarksDetector = std::make_shared<DnetLandmarksDetector>(configDir);
     mImageNormalizer = std::make_shared<ImageNormalizer>();
-    mFaceClassifier = std::make_shared<FaceClassifier>();
+    mFaceClassifier = std::make_shared<FaceClassifier>(configDir);
     mFaceRecognizer = std::make_shared<SphereFaceRecognizer>(configDir);
 
     return ReturnStatus(ReturnCode::Success);
@@ -85,6 +85,24 @@ NullImplFRVT11::createTemplate(
     }
 }
 
+void
+DebugPrint(const Rect& rect, const std::vector<int>& landmarks, std::vector<float> features)
+{
+    std::ofstream dataFile("flow_data.txt", std::ios::out | std::ios::app);
+
+    dataFile << "Rectangle: " << rect.x1 << " " << rect.y1 << " " << rect.x2 << " " << rect.y2 << std::endl;
+
+    dataFile << "Landmarks:";
+    for (int i = 0; i < 10; i++) dataFile << " " << landmarks[i];
+    dataFile << std::endl;
+
+    cv::Mat f1(512, 1, CV_32F, features.data());
+    f1 /= cv::norm(f1);
+    dataFile << "Features:";
+    for (int i=0; i < 512; i++) dataFile << " " << ((float *)f1.data)[i];
+    dataFile << std::endl;
+}
+
 ReturnStatus
 NullImplFRVT11::safeCreateTemplate(
         const Multiface &faces,
@@ -92,8 +110,6 @@ NullImplFRVT11::safeCreateTemplate(
         std::vector<uint8_t> &templ,
         std::vector<EyePair> &eyeCoordinates)
 {
-    // std::ofstream dataFile("flow_data.txt", std::ios::out | std::ios::app);
-
     std::vector<std::vector<float>> templates;
 
     for(const Image &image: faces) {
@@ -104,26 +120,23 @@ NullImplFRVT11::safeCreateTemplate(
             std::vector<Rect> rects = mFaceDetector->Detect(imageData);
             if (rects.size() == 0) continue;
             const Rect& rect = rects[0]; // should be only one face in image
-            // dataFile << "Rectangle: " << rect.x1 << " " << rect.y1 << " " << rect.x2 << " " << rect.y2 << std::endl;
 
             std::vector<int> landmarks = mLandmarksDetector->Detect(imageData, rect);
             if (landmarks.size() == 0) continue;
-            eyeCoordinates.push_back(EyePair(true, true, landmarks[0], landmarks[1], landmarks[2], landmarks[3]));
-            // dataFile << "Landmarks:";
-            // for (int i = 0; i < 10; i++) dataFile << " " << landmarks[i];
-            // dataFile << std::endl;
-
+            
             auto normalizedImage = mImageNormalizer->normalize(imageData, landmarks);
 
             std::vector<float> features = mFaceRecognizer->Infer(normalizedImage);
-            // dataFile << "Features:";
-            // for (int i=0; i < 25; i++) dataFile << " " << features[i];
-            // dataFile << std::endl;
 
-            bool classifyResult = mFaceClassifier->classify(features);
+            bool classifyResult = mFaceClassifier->classify(normalizedImage, landmarks, features);
 
             if (classifyResult)
+            {
+                eyeCoordinates.push_back(EyePair(true, true, landmarks[0], landmarks[1], landmarks[2], landmarks[3]));
                 templates.push_back(std::vector<float>(features.begin(), features.begin()+512));
+
+                // DebugPrint(rect, landmarks, features);
+            }
         }
         catch (const std::exception& e) {
             // Nothing to do for exceptions... move on to the next face...
@@ -151,8 +164,6 @@ NullImplFRVT11::matchTemplates(
     else {
         cv::Mat f1(512, 1, CV_32F, (float *)verifTemplate.data());
         cv::Mat f2(512, 1, CV_32F, (float *)enrollTemplate.data());
-        f1 /= cv::norm(f1);
-        f2 /= cv::norm(f2);
         similarity = 300 * (3 - cv::norm(f1 - f2));
     }
     return ReturnStatus(ReturnCode::Success);
