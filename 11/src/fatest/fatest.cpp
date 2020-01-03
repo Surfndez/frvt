@@ -12,13 +12,45 @@ using namespace FRVT;
 using namespace FRVT_11;
 
 /************************************/
-/*********** Sanity tests ***********/
+/*********** Utils ******************/
 /************************************/
 
-void RunSanityTests()
+void
+InitializeImplementation(std::shared_ptr<Interface>& implPtr)
+{
+    std::cout << "Initializing implementation" << std::endl;
+    implPtr->initialize("/home/administrator/nist2/frvt/11/config");
+}
+
+Image
+CvImageToImageData(const cv::Mat& image)
+{
+    std::shared_ptr<uint8_t> imageArray(new uint8_t[3 * image.rows * image.cols]);
+    std::memcpy(imageArray.get(), image.data, 3 * image.rows * image.cols);
+
+    Image imageData((uint16_t)image.cols, (uint16_t)image.rows, (uint8_t)24, imageArray, Image::Label::Unknown);
+    
+    return imageData;
+}
+
+Image
+LoadImageToImageData(const std::string& path)
+{
+    cv::Mat image = LoadImage(path);
+    FRVT::Image imageData = CvImageToImageData(image);
+    return imageData;
+}
+
+/************************************/
+/*********** Sanity tests ***********/
+/************************************/
+void test_face_classification(std::shared_ptr<Interface>& implPtr);
+
+void RunSanityTests(std::shared_ptr<Interface>& implPtr)
 {
     std::cout << "Running tests..." << std::endl;
     test_similarity_calculation();
+    test_face_classification(implPtr);
 }
 void test_similarity_calculation()
 {
@@ -58,26 +90,35 @@ void test_similarity_calculation()
     std::cout << (int(score) == int(expectedScore) ? "Pass" : "Fail") << std::endl;
 }
 
+void test_face_classification(std::shared_ptr<Interface>& implPtr)
+{
+    std::cout << "\tRunnnig: test_face_classification... " << std::endl;
+
+    std::vector<uint8_t> features;
+    std::vector<EyePair> eyeCoordinates;
+
+    FRVT::Image imageData = LoadImageToImageData("../test_data/good_face.png");
+    features.clear();
+    eyeCoordinates.clear();
+    implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
+    std::cout << "\t\t\tGood face: " << (eyeCoordinates.size() == 1 ? "Pass" : "Fail") << std::endl;
+
+    imageData = LoadImageToImageData("../test_data/blurred_face_low_norm.png");
+    features.clear();
+    eyeCoordinates.clear();
+    implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
+    std::cout << "\t\t\tBlurred face: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
+
+    imageData = LoadImageToImageData("../test_data/wheel.png");
+    features.clear();
+    eyeCoordinates.clear();
+    implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
+    std::cout << "\t\t\tWheel: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
+}
+
 /****************************************/
 /*********** End sanity tests ***********/
 /****************************************/
-
-void
-InitializeImplementation(std::shared_ptr<Interface>& implPtr)
-{
-    implPtr->initialize("/home/administrator/nist2/frvt/11/config");
-}
-
-Image
-CvImageToImageData(const cv::Mat& image)
-{
-    std::shared_ptr<uint8_t> imageArray(new uint8_t[3 * image.rows * image.cols]);
-    std::memcpy(imageArray.get(), image.data, 3 * image.rows * image.cols);
-
-    Image imageData((uint16_t)image.cols, (uint16_t)image.rows, (uint8_t)24, imageArray, Image::Label::Unknown);
-    
-    return imageData;
-}
 
 void
 PrintTemplate(const std::vector<EyePair>& eyeCoordinates, const std::vector<uint8_t>& features)
@@ -107,21 +148,26 @@ GetNumComparisons(int numFeatures)
 void
 RunTest(const std::string& list_path)
 {
-    // Load test list
-
-    auto testList = ReadTestList(list_path);
-    // std::vector<std::string> testList(testList_.begin(), testList_.begin()+100);
-
     // Create FRVT implementation
 
     auto implPtr = FRVT_11::Interface::getImplementation();
     InitializeImplementation(implPtr);
+
+    // Run sanity tests
+
+    RunSanityTests(implPtr);
+
+    // Load test list
+
+    std::cout << "List path: " << list_path << std::endl;
+    auto testList = ReadTestList(list_path);
 
     // Collections
 
     std::vector<std::string> collectedFiles;
     std::vector<std::vector<uint8_t>> collectedFeatures;
     std::vector<std::vector<EyePair>> collectedEyes;
+    int detectedFaces = 0;
     
     // Extract features
 
@@ -134,8 +180,7 @@ RunTest(const std::string& list_path)
         const std::string& file = testList[progress];
         auto path = "/home/administrator/face_data/benchmarks/original/" + file;
 
-        cv::Mat image = LoadImage(path);
-        FRVT::Image imageData = CvImageToImageData(image);
+        FRVT::Image imageData = LoadImageToImageData(path);
 
         std::vector<uint8_t> features;
         std::vector<EyePair> eyeCoordinates;
@@ -146,11 +191,17 @@ RunTest(const std::string& list_path)
         collectedFeatures.push_back(features);
         collectedEyes.push_back(eyeCoordinates);
 
-        PrintTemplate(eyeCoordinates, features);
+        if (eyeCoordinates.size() == 1)
+        {
+            detectedFaces += 1;
+            PrintTemplate(eyeCoordinates, features);
+        }
 
         if (progress == 0) progress_bar.RestartTime();
         if (progress > 0) progress_bar.Print(progress / 2);
     }
+
+    std::cout << "Number of detected faces: " << detectedFaces << "/" << collectedFiles.size() << std::endl;
 
     // Compare
 
@@ -204,10 +255,6 @@ main(int argc, char* argv[])
         return 1;
     }
     std::string listPath = argv[1];
-
-    RunSanityTests();
-
-    std::cout << "List path: " << listPath << std::endl;
 
     RunTest(listPath);
 
