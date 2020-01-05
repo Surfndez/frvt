@@ -13,7 +13,7 @@ using namespace InferenceEngine;
 
 OpenVinoInference::OpenVinoInference(const std::string &modelPath) : mModelPath(modelPath)
 {
-    Init();
+    // Init();
 }
 
 void
@@ -63,6 +63,12 @@ OpenVinoInference::Init()
 std::shared_ptr<InferenceEngine::Blob>
 OpenVinoInference::Infer(const cv::Mat& image)
 {
+	if (needInit)
+	{
+		Init();
+		needInit = false;
+	}
+
     Blob::Ptr input = m_infer_request.GetBlob(mInputName);
     auto input_data = input->buffer().as<PrecisionTrait<Precision::FP32>::value_type *>();
     size_t channels_number = input->getTensorDesc().getDims()[1];

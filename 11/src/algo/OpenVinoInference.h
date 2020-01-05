@@ -19,6 +19,7 @@ public:
     std::shared_ptr<InferenceEngine::Blob> Infer(const cv::Mat& image);
 
 private:
+    bool needInit = true;
     std::string mModelPath;
     InferRequest m_infer_request;
     CNNNetwork m_network;
