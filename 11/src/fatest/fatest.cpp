@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <limits>
+#include <stdio.h>
 
 #include "frvt11.h"
 #include "TestUtils.h"
@@ -14,13 +15,6 @@ using namespace FRVT_11;
 /************************************/
 /*********** Utils ******************/
 /************************************/
-
-void
-InitializeImplementation(std::shared_ptr<Interface>& implPtr)
-{
-    std::cout << "Initializing implementation" << std::endl;
-    implPtr->initialize("/home/administrator/nist2/frvt/11/config");
-}
 
 Image
 CvImageToImageData(const cv::Mat& image)
@@ -41,9 +35,31 @@ LoadImageToImageData(const std::string& path)
     return imageData;
 }
 
+void
+InitializeImplementation(std::shared_ptr<Interface>& implPtr)
+{
+    std::cout << "Initializing implementation" << std::endl;
+    implPtr->initialize("/home/administrator/nist2/frvt/11/config");
+
+    // Initialization is done before first inference so trigger one...
+    FRVT::Image imageData = LoadImageToImageData("../test_data/frgc_ndcb_04222d100__good_face.jpg");
+    std::vector<uint8_t> features; std::vector<EyePair> eyeCoordinates;
+    implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
+}
+
 /************************************/
 /*********** Sanity tests ***********/
 /************************************/
+void
+DeleteTestsData()
+{
+    remove("fatest_features.txt");
+    remove("fatest_landmarks.txt");
+    remove("fatest_scores.txt");
+    remove("flow_data.txt");
+    remove("classification_data.txt");
+}
+
 void test_face_classification(std::shared_ptr<Interface>& implPtr);
 
 void RunSanityTests(std::shared_ptr<Interface>& implPtr)
@@ -97,23 +113,29 @@ void test_face_classification(std::shared_ptr<Interface>& implPtr)
     std::vector<uint8_t> features;
     std::vector<EyePair> eyeCoordinates;
 
-    FRVT::Image imageData = LoadImageToImageData("../test_data/good_face.png");
+    FRVT::Image imageData = LoadImageToImageData("../test_data/frgc_ndcb_04222d100__good_face.jpg");
     features.clear();
     eyeCoordinates.clear();
     implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
     std::cout << "\t\t\tGood face: " << (eyeCoordinates.size() == 1 ? "Pass" : "Fail") << std::endl;
 
-    imageData = LoadImageToImageData("../test_data/blurred_face_low_norm.png");
+    imageData = LoadImageToImageData("../test_data/frgc_ndcb_04226d50__low_norm.jpg");
     features.clear();
     eyeCoordinates.clear();
     implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
-    std::cout << "\t\t\tBlurred face: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
+    std::cout << "\t\t\tLow features norm: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
 
-    imageData = LoadImageToImageData("../test_data/wheel.png");
+    imageData = LoadImageToImageData("../test_data/frgc_ndcb_04213d51__landmarks_scale.jpg");
     features.clear();
     eyeCoordinates.clear();
     implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
-    std::cout << "\t\t\tWheel: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
+    std::cout << "\t\t\tLandmarks scale: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
+
+    imageData = LoadImageToImageData("../test_data/vgg_008028_0611_01__landmarks_scale.jpg");
+    features.clear();
+    eyeCoordinates.clear();
+    implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
+    std::cout << "\t\t\tLandmarks scale: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
 }
 
 /****************************************/
@@ -255,6 +277,8 @@ main(int argc, char* argv[])
         return 1;
     }
     std::string listPath = argv[1];
+
+    DeleteTestsData();
 
     RunTest(listPath);
 
