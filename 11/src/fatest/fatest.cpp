@@ -57,7 +57,6 @@ DeleteTestsData()
     remove("fatest_landmarks.txt");
     remove("fatest_scores.txt");
     remove("flow_data.txt");
-    remove("classification_data.txt");
 }
 
 void test_face_classification(std::shared_ptr<Interface>& implPtr);
@@ -136,6 +135,12 @@ void test_face_classification(std::shared_ptr<Interface>& implPtr)
     eyeCoordinates.clear();
     implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
     std::cout << "\t\t\tLandmarks scale: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
+
+    imageData = LoadImageToImageData("../test_data/flicker_8694811442_0__wheel.jpg");
+    features.clear();
+    eyeCoordinates.clear();
+    implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
+    std::cout << "\t\t\tWheel: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
 }
 
 /****************************************/
@@ -178,6 +183,10 @@ RunTest(const std::string& list_path)
     // Run sanity tests
 
     RunSanityTests(implPtr);
+
+    // Clean files
+
+    DeleteTestsData();
 
     // Load test list
 
@@ -278,7 +287,7 @@ main(int argc, char* argv[])
     }
     std::string listPath = argv[1];
 
-    DeleteTestsData();
+    remove("classification_data.txt");
 
     RunTest(listPath);
 
