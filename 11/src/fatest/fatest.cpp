@@ -79,7 +79,7 @@ void RunSanityTests(std::shared_ptr<Interface>& implPtr)
 }
 void test_similarity_calculation()
 {
-    std::cout << "\tRunnnig: test_similarity_calculation... ";
+    std::cout << "\tRunnnig: test_similarity_calculation (unit test)... ";
 
     auto implPtr = FRVT_11::Interface::getImplementation();
     std::ifstream infile("../test_data/test_features_similarity.txt");
