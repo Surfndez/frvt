@@ -27,7 +27,10 @@ public:
 
 private:
     std::shared_ptr<FaceDetector> mFaceDetector;
-    float mMinFaceIou = 0.0f;
+    float mMinFeaturesNorm = 20.f;
+    int mMinLandmarksScale = 20;
+    float mMinLandmarksIou = 0.06f;
+    float mMinFaceIou = 0.3f;
 };
 }
 

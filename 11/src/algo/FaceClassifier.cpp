@@ -4,9 +4,19 @@
 
 using namespace FRVT_11;
 
-const float MIN_FEATURES_NORM = 20.f;
-const int MIN_LANDMARKS_SCALE = 20;
-const float MIN_LANDMARKS_IOU = 0.05f;
+void
+DumpImage(const cv::Mat& image)
+{
+    static int index = 0;
+
+    cv::Mat flat = image.reshape(1, image.cols * image.rows * image.channels());
+    std::vector<uchar> vec = image.isContinuous()? flat : flat.clone();
+
+    index += 1;
+    std::ofstream fout(std::string("images/image_") + std::to_string(index) + ".bin", std::ios::out | std::ios::binary);
+    fout.write((char*)&vec[0], vec.size());
+    fout.close();
+}
 
 float
 CalcFeaturesNorm(std::vector<float> features)
@@ -96,21 +106,21 @@ FaceClassifier::classify(const cv::Mat& image, const Rect& face, std::vector<int
 
     float features_norm = CalcFeaturesNorm(features);
     // dataFile << "norm " << features_norm << features_norm;
-    if (features_norm < MIN_FEATURES_NORM)
+    if (features_norm < mMinFeaturesNorm)
     {
         return FaceClassificationResult::Norm;
     }
 
     int landmarks_scale = CalcLandmarksScale(landmarks);
     // dataFile << " | lscale " << landmarks_scale;
-    if (landmarks_scale < MIN_LANDMARKS_SCALE)
+    if (landmarks_scale < mMinLandmarksScale)
     {
         return FaceClassificationResult::Lscale;
     }
 
     float landmarks_iou = CalculateLandmarksIOU(face, landmarks);
     // dataFile << " | liou " << landmarks_iou;
-    if (landmarks_iou < MIN_LANDMARKS_IOU)
+    if (landmarks_iou < mMinLandmarksIou)
     {
         return FaceClassificationResult::Liou;
     }
@@ -118,7 +128,7 @@ FaceClassifier::classify(const cv::Mat& image, const Rect& face, std::vector<int
     std::vector<Rect> rects = mFaceDetector->Detect(image);
     if (rects.size() == 0)
     {
-        // dataFile << " | no face";
+        dataFile << " | no face";
         return FaceClassificationResult::NoFace;
     }
 
@@ -130,6 +140,7 @@ FaceClassifier::classify(const cv::Mat& image, const Rect& face, std::vector<int
     }
 
     // dataFile << "| Passed";
+    // DumpImage(image);
 
     return FaceClassificationResult::Pass;
 }
