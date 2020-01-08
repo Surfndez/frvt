@@ -97,10 +97,13 @@ DebugPrint(const Rect& rect, const std::vector<int>& landmarks, std::vector<floa
     dataFile << std::endl;
 
     cv::Mat f1(512, 1, CV_32F, features.data());
-    f1 /= cv::norm(f1);
+    float norm = cv::norm(f1);
+    f1 /= norm;
     dataFile << "Features:";
     for (int i=0; i < 512; i++) dataFile << " " << ((float *)f1.data)[i];
     dataFile << std::endl;
+
+    dataFile << "Norm: " << norm << std::endl;
 }
 
 ReturnStatus
