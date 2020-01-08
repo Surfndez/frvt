@@ -145,6 +145,10 @@ void test_face_classifier()
     r = fc.classify(cv::imread("../test_data/normalized_face.png"), rect, landmarks, features);
     std::cout << "\t\tFace image: " << (r == FaceClassificationResult::Pass ? "Pass" : "Fail") << std::endl;
 
+    fc.SetMinFaceIou(0.3);
+    r = fc.classify(cv::imread("../test_data/normalized_face.png"), rect, landmarks, features);
+    std::cout << "\t\tMin IOU 0.3: " << (r == FaceClassificationResult::Pass ? "Pass" : "Fail") << std::endl;
+
     fc.SetMinFaceIou(0.9);
     r = fc.classify(cv::imread("../test_data/normalized_face.png"), rect, landmarks, features);
     std::cout << "\t\tMin IOU 0.9: " << (r == FaceClassificationResult::Fiou ? "Pass" : "Fail") << std::endl;
