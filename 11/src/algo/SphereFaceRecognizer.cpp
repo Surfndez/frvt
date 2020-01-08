@@ -20,7 +20,7 @@ NormalizeImage(const cv::Mat& image)
 
 SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
-    std::string sphereModelPath = configDir + "/sphereface_drop-sphere_v0_108_dm100_se_arcface_listv12_obj3_sim_01-175000_features";
+    std::string sphereModelPath = configDir + "/fa_model"; // sphereface_drop-sphere_v0_108_dm100_se_arcface_listv12_obj3_sim_01-175000_features
     mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(sphereModelPath));
 }
 

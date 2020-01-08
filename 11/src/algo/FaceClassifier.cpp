@@ -84,7 +84,7 @@ CalculateFaceIOU(const Rect& face)
 
 FaceClassifier::FaceClassifier(const std::string &configDir)
 {
-    mFaceDetector = std::make_shared<SsdFaceDetector>(configDir, "/facessd_mobilenet_v2_dm100_swish_128x128_wider_filter20_0-509586", 128);
+    mFaceDetector = std::make_shared<SsdFaceDetector>(configDir, "/fd_128_509586", 128); // facessd_mobilenet_v2_dm100_swish_128x128_wider_filter20_0-509586
 }
 
 FaceClassificationResult
