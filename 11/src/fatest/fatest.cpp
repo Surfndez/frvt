@@ -4,13 +4,19 @@
 #include <limits>
 #include <stdio.h>
 
+#include <opencv2/highgui.hpp>
+
 #include "frvt11.h"
 #include "TestUtils.h"
 #include "ProgressBar.h"
 #include "SanityTests.h"
 
+#include "../algo/FaceClassifier.h"
+
 using namespace FRVT;
 using namespace FRVT_11;
+
+const std::string CONFIG_DIR = "/home/administrator/nist2/frvt/11/config";
 
 /************************************/
 /*********** Utils ******************/
@@ -39,7 +45,7 @@ void
 InitializeImplementation(std::shared_ptr<Interface>& implPtr)
 {
     std::cout << "Initializing implementation" << std::endl;
-    implPtr->initialize("/home/administrator/nist2/frvt/11/config");
+    implPtr->initialize(CONFIG_DIR);
 
     // Initialization is done before first inference so trigger one...
     FRVT::Image imageData = LoadImageToImageData("../test_data/frgc_ndcb_04222d100__good_face.jpg");
@@ -59,13 +65,17 @@ DeleteTestsData()
     remove("flow_data.txt");
 }
 
+void test_face_classifier();
 void test_face_classification(std::shared_ptr<Interface>& implPtr);
+void test_face_classification_list(std::shared_ptr<Interface>& implPtr);
 
 void RunSanityTests(std::shared_ptr<Interface>& implPtr)
 {
     std::cout << "Running tests..." << std::endl;
     test_similarity_calculation();
+    test_face_classifier();
     test_face_classification(implPtr);
+    test_face_classification_list(implPtr);
 }
 void test_similarity_calculation()
 {
@@ -105,6 +115,37 @@ void test_similarity_calculation()
     std::cout << (int(score) == int(expectedScore) ? "Pass" : "Fail") << std::endl;
 }
 
+void test_face_classifier()
+{
+    std::cout << "\tRunnnig: test_face_classifier (unit test)... " << std::endl;
+
+    FaceClassifier fc(CONFIG_DIR);
+
+    std::vector<float> features;
+    for (int i = 0; i < 512; i++) features.push_back(0.001 * i);
+    auto r = fc.classify(cv::Mat(), Rect(0, 0, 0, 0, 0), {}, features);
+    std::cout << "\t\tLow features norm: " << (r == FaceClassificationResult::Norm ? "Pass" : "Fail") << std::endl;
+
+    features.clear();
+    for (int i = 0; i < 512; i++) features.push_back(1.0);
+
+    r = fc.classify(cv::Mat(), Rect(0, 0, 0, 0, 0), {0, 0, 5, 0, 2, 2, 1, 4, 4, 4}, features);
+    std::cout << "\t\tSmall landmarks scale: " << (r == FaceClassificationResult::Lscale ? "Pass" : "Fail") << std::endl;
+
+    std::vector<int> landmarks = {0, 0, 50, 0, 25, 25, 5, 45, 45, 45};
+
+    r = fc.classify(cv::Mat(), Rect(0, 0, 1000, 1000, 0), landmarks, features);
+    std::cout << "\t\tSmall landmarks scale: " << (r == FaceClassificationResult::Liou ? "Pass" : "Fail") << std::endl;
+
+    Rect rect(0, 0, 100, 100, 0.9);
+
+    r = fc.classify(cv::imread("../test_data/normalized_no_face.png"), rect, landmarks, features);
+    std::cout << "\t\tNo face image: " << (r == FaceClassificationResult::NoFace ? "Pass" : "Fail") << std::endl;
+
+    r = fc.classify(cv::imread("../test_data/normalized_face.png"), rect, landmarks, features);
+    std::cout << "\t\tFace image: " << (r == FaceClassificationResult::Pass ? "Pass" : "Fail") << std::endl;
+}
+
 void test_face_classification(std::shared_ptr<Interface>& implPtr)
 {
     std::cout << "\tRunnnig: test_face_classification... " << std::endl;
@@ -116,31 +157,60 @@ void test_face_classification(std::shared_ptr<Interface>& implPtr)
     features.clear();
     eyeCoordinates.clear();
     implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
-    std::cout << "\t\t\tGood face: " << (eyeCoordinates.size() == 1 ? "Pass" : "Fail") << std::endl;
-
-    imageData = LoadImageToImageData("../test_data/frgc_ndcb_04226d50__low_norm.jpg");
-    features.clear();
-    eyeCoordinates.clear();
-    implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
-    std::cout << "\t\t\tLow features norm: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
-
-    imageData = LoadImageToImageData("../test_data/frgc_ndcb_04213d51__landmarks_scale.jpg");
-    features.clear();
-    eyeCoordinates.clear();
-    implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
-    std::cout << "\t\t\tLandmarks scale: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
-
-    imageData = LoadImageToImageData("../test_data/vgg_008028_0611_01__landmarks_scale.jpg");
-    features.clear();
-    eyeCoordinates.clear();
-    implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
-    std::cout << "\t\t\tLandmarks scale: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
+    std::cout << "\t\tGood face: " << (eyeCoordinates.size() == 1 ? "Pass" : "Fail") << std::endl;
 
     imageData = LoadImageToImageData("../test_data/flicker_8694811442_0__wheel.jpg");
     features.clear();
     eyeCoordinates.clear();
     implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
-    std::cout << "\t\t\tWheel: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
+    std::cout << "\t\tWheel: " << (eyeCoordinates.size() == 0 ? "Pass" : "Fail") << std::endl;
+}
+
+void test_face_classification_list(std::shared_ptr<Interface>& implPtr)
+{
+    std::cout << "\tRunnnig: test_face_classification_list... " << std::endl;
+
+    auto testList = ReadTestList("/home/administrator/face_data/benchmarks/spoof/spoof_test_list.txt");
+
+    ProgressBarPrinter progress_bar("Classification test", testList.size() / 2, 1, "\t\t");
+
+    int fp = 0;
+    int tp = 0;
+    int fn = 0;
+    int tn = 0;
+    
+    for (int progress=0; progress < testList.size(); progress+=2)
+    {
+        if (progress == 0) progress_bar.Print(progress);
+
+        const std::string& file = testList[progress];
+        auto path = "/home/administrator/face_data/benchmarks/spoof/images/" + file;
+
+        FRVT::Image imageData = LoadImageToImageData(path);
+
+        std::vector<uint8_t> features;
+        std::vector<EyePair> eyeCoordinates;
+
+        implPtr->createTemplate({imageData}, TemplateRole::Enrollment_11, features, eyeCoordinates);
+
+        if (testList[progress + 1] == "1")
+        {
+            if (eyeCoordinates.size() == 0) tp += 1;
+            else fn += 1;
+        }
+        else
+        {
+            if (eyeCoordinates.size() == 1) tn += 1;
+            else fp += 1;
+        }
+
+        if (progress == 0) progress_bar.RestartTime();
+        if (progress > 0) progress_bar.Print(progress / 2);
+    }
+
+    std::cout << "\t\t";
+    if (fp > 0 || fn > 0) std::cout << "Fail " << fn << "/" << tp + fn << " " << fp << "/" << fp + tn << std::endl;
+    else std::cout << "Pass" << std::endl;
 }
 
 /****************************************/
@@ -190,7 +260,7 @@ RunTest(const std::string& list_path)
 
     // Load test list
 
-    std::cout << "List path: " << list_path << std::endl;
+    std::cout << "Running accuracy test..." << std::endl << " List path: " << list_path << std::endl;
     auto testList = ReadTestList(list_path);
 
     // Collections
@@ -232,7 +302,7 @@ RunTest(const std::string& list_path)
         if (progress > 0) progress_bar.Print(progress / 2);
     }
 
-    std::cout << "Number of detected faces: " << detectedFaces << "/" << collectedFiles.size() << std::endl;
+    std::cout << " Number of detected faces: " << detectedFaces << "/" << collectedFiles.size() << std::endl;
 
     // Compare
 
