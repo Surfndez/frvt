@@ -23,8 +23,11 @@ public:
 
     FaceClassificationResult classify(const cv::Mat& image, const Rect& face, std::vector<int> landmarks, const std::vector<float>& features) const;
 
+    void SetMinFaceIou(float value) { mMinFaceIou = value; }
+
 private:
     std::shared_ptr<FaceDetector> mFaceDetector;
+    float mMinFaceIou = 0.0f;
 };
 }
 

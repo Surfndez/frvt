@@ -6,7 +6,7 @@ using namespace FRVT_11;
 
 const float MIN_FEATURES_NORM = 20.f;
 const int MIN_LANDMARKS_SCALE = 20;
-const float MIN_LANDMARKS_IOU = 0.06f;
+const float MIN_LANDMARKS_IOU = 0.05f;
 
 float
 CalcFeaturesNorm(std::vector<float> features)
@@ -68,6 +68,20 @@ CalculateLandmarksIOU(const Rect& face, const std::vector<int>& landmarks)
     return iou;
 }
 
+float
+CalculateFaceIOU(const Rect& face)
+{
+    int normalization_size = 128;
+    int face_overlap_x0 = std::max(face.x1, 0);
+    int face_overlap_y0 = std::max(face.y1, 0);
+    int face_overlap_x1 = std::min(face.x2, normalization_size);
+    int face_overlap_y1 = std::min(face.y2, normalization_size);
+    int face_area = (face.x2 - face.x1) * (face.y2 - face.y1);
+    int face_overlap_area = std::max(face_overlap_x1 - face_overlap_x0, 0) * std::max(face_overlap_y1 - face_overlap_y0, 0);
+    float iou = float(face_overlap_area) / ((normalization_size*normalization_size) + face_area - face_overlap_area);
+    return iou;
+}
+
 FaceClassifier::FaceClassifier(const std::string &configDir)
 {
     mFaceDetector = std::make_shared<SsdFaceDetector>(configDir, "/facessd_mobilenet_v2_dm100_swish_128x128_wider_filter20_0-509586", 128);
@@ -78,7 +92,7 @@ FaceClassifier::classify(const cv::Mat& image, const Rect& face, std::vector<int
 {
     // std::ofstream dataFile("classification_data.txt", std::ios::out | std::ios::app);
 
-    dataFile << std::endl;
+    // dataFile << std::endl;
 
     float features_norm = CalcFeaturesNorm(features);
     // dataFile << "norm " << features_norm << features_norm;
@@ -106,6 +120,13 @@ FaceClassifier::classify(const cv::Mat& image, const Rect& face, std::vector<int
     {
         // dataFile << " | no face";
         return FaceClassificationResult::NoFace;
+    }
+
+    float face_iou = CalculateFaceIOU(rects[0]);
+    // dataFile << " | fiou " << face_iou;
+    if (face_iou < mMinFaceIou)
+    {
+        return FaceClassificationResult::Fiou;
     }
 
     // dataFile << "| Passed";

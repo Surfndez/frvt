@@ -144,6 +144,10 @@ void test_face_classifier()
 
     r = fc.classify(cv::imread("../test_data/normalized_face.png"), rect, landmarks, features);
     std::cout << "\t\tFace image: " << (r == FaceClassificationResult::Pass ? "Pass" : "Fail") << std::endl;
+
+    fc.SetMinFaceIou(0.9);
+    r = fc.classify(cv::imread("../test_data/normalized_face.png"), rect, landmarks, features);
+    std::cout << "\t\tMin IOU 0.9: " << (r == FaceClassificationResult::Fiou ? "Pass" : "Fail") << std::endl;
 }
 
 void test_face_classification(std::shared_ptr<Interface>& implPtr)
@@ -170,7 +174,7 @@ void test_face_classification_list(std::shared_ptr<Interface>& implPtr)
 {
     std::cout << "\tRunnnig: test_face_classification_list... " << std::endl;
 
-    auto testList = ReadTestList("/home/administrator/face_data/benchmarks/spoof/spoof_test_list.txt");
+    auto testList = ReadTestList("/mnt/public-datasets/IJB-C/NIST_11/benchmarks/face_classification/spoof_test_list.txt");
 
     ProgressBarPrinter progress_bar("Classification test", testList.size() / 2, 1, "\t\t");
 
@@ -209,7 +213,7 @@ void test_face_classification_list(std::shared_ptr<Interface>& implPtr)
     }
 
     std::cout << "\t\t";
-    if (fp > 0 || fn > 0) std::cout << "Fail " << fn << "/" << tp + fn << " " << fp << "/" << fp + tn << std::endl;
+    if (fp > 0 || fn > 0) std::cout << "Fail " << fn << "/" << tp + fn /*<< " " << fp << "/" << fp + tn*/ << std::endl;
     else std::cout << "Pass" << std::endl;
 }
 
@@ -279,7 +283,7 @@ RunTest(const std::string& list_path)
         if (progress == 0) progress_bar.Print(progress);
 
         const std::string& file = testList[progress];
-        auto path = "/home/administrator/face_data/benchmarks/original/" + file;
+        auto path = "/home/administrator/face_data/benchmarks/spoof/images/" + file;
 
         FRVT::Image imageData = LoadImageToImageData(path);
 
@@ -342,9 +346,9 @@ RunTest(const std::string& list_path)
     // Output TPR
 
     std::cout << std::endl;
-    std::cout << "TPR @ FPR 1:" << 10 << " = " << CalculateTPR(10, diff_scores, same_scores) << std::endl;
     std::cout << "TPR @ FPR 1:" << 100 << " = " << CalculateTPR(100, diff_scores, same_scores) << std::endl;
     std::cout << "TPR @ FPR 1:" << 1000 << " = " << CalculateTPR(1000, diff_scores, same_scores) << std::endl;
+    std::cout << "TPR @ FPR 1:" << 10000 << " = " << CalculateTPR(10000, diff_scores, same_scores) << std::endl;
 }
 
 
