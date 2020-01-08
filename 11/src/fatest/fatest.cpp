@@ -142,8 +142,9 @@ void test_face_classifier()
     r = fc.classify(cv::imread("../test_data/normalized_no_face.png"), rect, landmarks, features);
     std::cout << "\t\tNo face image: " << (r == FaceClassificationResult::NoFace ? "Pass" : "Fail") << std::endl;
 
+    fc.SetMinFaceIou(0.0);
     r = fc.classify(cv::imread("../test_data/normalized_face.png"), rect, landmarks, features);
-    std::cout << "\t\tFace image: " << (r == FaceClassificationResult::Pass ? "Pass" : "Fail") << std::endl;
+    std::cout << "\t\tFace image IOU 0.0: " << (r == FaceClassificationResult::Pass ? "Pass" : "Fail") << std::endl;
 
     fc.SetMinFaceIou(0.3);
     r = fc.classify(cv::imread("../test_data/normalized_face.png"), rect, landmarks, features);
