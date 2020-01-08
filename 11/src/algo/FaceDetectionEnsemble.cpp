@@ -7,7 +7,7 @@ FaceDetectionEnsemble::FaceDetectionEnsemble(const std::string &configDir)
 {
     mDetectors = {
         std::make_shared<SsdFaceDetector>(configDir, "/fd_416_400000", 416), // ssdlite_mobilenet_v3_large_416x416_fddb_wider_tasqai_noface2_filter10_0-400000
-        std::make_shared<SsdFaceDetector>(configDir, "/fd_512_527691", 512) // facessd_mobilenet_v2_dm100_swish_512x512_wider_filter10_0-527691
+        // std::make_shared<SsdFaceDetector>(configDir, "/fd_512_527691", 512) // facessd_mobilenet_v2_dm100_swish_512x512_wider_filter10_0-527691
     };
 }
 
