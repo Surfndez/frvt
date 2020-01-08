@@ -13,14 +13,14 @@
 
 class ProgressBarPrinter {
 public:
-    ProgressBarPrinter(const std::string& desc, int total_items, int update_freq=1) :
-        total_items(total_items), start_time(std::chrono::high_resolution_clock::now()), description(desc), update_freq(update_freq) {}
+    ProgressBarPrinter(const std::string& desc, int total_items, int update_freq=1, const std::string& desc_prefix = " ") :
+        total_items(total_items), start_time(std::chrono::high_resolution_clock::now()), description(desc), update_freq(update_freq), description_prefix(desc_prefix) {}
     
     void Print(int progress)
     {
         if (progress == 0)
         {
-            std::cout << "Progress: 0% | 0/" << total_items << "\r" << std::flush;
+            std::cout << description_prefix << "Progress: 0% | 0/" << total_items << "\r" << std::flush;
         }
         else
         {
@@ -43,7 +43,7 @@ public:
             if (progress % update_freq == 0)
             {
                 std::cout
-                    << " " << description << ": "
+                    << description_prefix << description << ": "
                     << percentage_finished << "% | " << items_finished << "/" << total_items
                     << " | Remaining time: " << minutes_remaining << ":" << (seconds_remaining < 10 ? "0" : "") << seconds_remaining
                     << " | Time per item: " << time_per_item
@@ -67,6 +67,7 @@ private:
     int total_items;
     std::vector<double> times_per_item;
     std::string description;
+    std::string description_prefix;
     int update_freq;
 };
 

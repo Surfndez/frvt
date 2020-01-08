@@ -128,9 +128,9 @@ NullImplFRVT11::safeCreateTemplate(
 
             std::vector<float> features = mFaceRecognizer->Infer(normalizedImage);
 
-            bool classifyResult = mFaceClassifier->classify(normalizedImage, landmarks, features);
+            auto classifyResult = mFaceClassifier->classify(normalizedImage, rect, landmarks, features);
 
-            if (classifyResult)
+            if (classifyResult == FaceClassificationResult::Pass)
             {
                 eyeCoordinates.push_back(EyePair(true, true, landmarks[0], landmarks[1], landmarks[2], landmarks[3]));
                 templates.push_back(std::vector<float>(features.begin(), features.begin()+512));
