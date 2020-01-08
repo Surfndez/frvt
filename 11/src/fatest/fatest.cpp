@@ -135,7 +135,7 @@ void test_face_classifier()
     std::vector<int> landmarks = {0, 0, 50, 0, 25, 25, 5, 45, 45, 45};
 
     r = fc.classify(cv::Mat(), Rect(0, 0, 1000, 1000, 0), landmarks, features);
-    std::cout << "\t\tSmall landmarks IUO: " << (r == FaceClassificationResult::Liou ? "Pass" : "Fail") << std::endl;
+    std::cout << "\t\tSmall landmarks IOU: " << (r == FaceClassificationResult::Liou ? "Pass" : "Fail") << std::endl;
 
     Rect rect(0, 0, 100, 100, 0.9);
 
