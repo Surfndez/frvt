@@ -128,7 +128,7 @@ FaceClassifier::classify(const cv::Mat& image, const Rect& face, std::vector<int
     std::vector<Rect> rects = mFaceDetector->Detect(image);
     if (rects.size() == 0)
     {
-        dataFile << " | no face";
+        // dataFile << " | no face";
         return FaceClassificationResult::NoFace;
     }
 

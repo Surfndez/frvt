@@ -20,6 +20,7 @@ void
 OpenVinoInference::Init()
 {
 	static Core ie;
+	ie.SetConfig({{ CONFIG_KEY(CPU_BIND_THREAD), CONFIG_VALUE(NO) }}, "CPU");
 	std::string xml_path = mModelPath + ".xml";
 	std::string bin_path = mModelPath + ".bin";
 	const file_name_t input_model_xml{ xml_path };
