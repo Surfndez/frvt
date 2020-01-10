@@ -55,6 +55,7 @@ AveragePoolOnTemplates(const std::vector<std::vector<float>>& templates)
 ReturnStatus
 NullImplFRVT11::initialize(const std::string &configDir)
 {
+    putenv("TF_CPP_MIN_LOG_LEVEL=3"); // Disable TensorFlow logs
     putenv("OMP_NUM_THREADS=1"); // Disable MKL muilti-threading
     cv::setNumThreads(0); // Disable OpenCV use of TBB
 
