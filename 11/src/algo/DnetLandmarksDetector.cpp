@@ -143,7 +143,10 @@ AdjustLandmarks(const ImageCrop& imageCrop, const float* landmarks)
 DnetLandmarksDetector::DnetLandmarksDetector(const std::string &configDir)
 {
     std::string modelPath = configDir + DNET_MODEL_NAME;
-    mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(modelPath));
+    if (mOpenVino)
+        mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(modelPath));
+    else
+        mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(modelPath, {"d_net_input"}, {"lm_output/BiasAdd"}));
 }
 
 DnetLandmarksDetector::~DnetLandmarksDetector() {}
@@ -157,8 +160,18 @@ DnetLandmarksDetector::Detect(const cv::Mat& image, const Rect &face) const
     cv::Mat inferImage = NormalizeImage(imageCrop.croppedImage);
     
     // Perform inference
+
+    float* result = nullptr;
+    if (mOpenVino)
+    {
     auto output = mModelInference->Infer(inferImage);
-    const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
+        result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
+    }
+    else
+    {
+        auto output = mTensorFlowInference->Infer(inferImage);
+        result = static_cast<float*>(TF_TensorData(output[0].get()));
+    }
 
     // Process output
 
