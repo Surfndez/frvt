@@ -17,7 +17,7 @@ private:
     std::vector<int> DoDetect(cv::Mat& image, const Rect &face) const;
     double CalcFlippedLandmarksDistance(const ImageData& imageData, const Rect &face, const std::vector<int>& landmarks) const;
 
-    bool mOpenVino = true;
+    bool mOpenVino = false;
     std::shared_ptr<OpenVinoInference> mModelInference;
     std::shared_ptr<TensorFlowInference> mTensorFlowInference;
 };
