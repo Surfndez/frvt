@@ -19,7 +19,7 @@ private:
     std::shared_ptr<OpenVinoInference> mModelInference;
     std::shared_ptr<TensorFlowInference> mTensorFlowInference;
     int mInputSize;
-    bool mOpenVino = true;
+    bool mOpenVino = false;
 };
 }
 

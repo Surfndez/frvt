@@ -146,7 +146,8 @@ DnetLandmarksDetector::DnetLandmarksDetector(const std::string &configDir)
 {
     std::string modelPath = configDir + DNET_MODEL_NAME;
     if (mOpenVino)
-        mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(modelPath));
+        // mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(modelPath));
+        return;
     else
         mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(modelPath, {"d_net_input"}, {"lm_output/BiasAdd"}));
 }
@@ -175,8 +176,8 @@ DnetLandmarksDetector::DoDetect(cv::Mat& image, const Rect &face) const
     float* result = nullptr;
     if (mOpenVino)
     {
-        auto output = mModelInference->Infer(image);
-        result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
+        // auto output = mModelInference->Infer(image);
+        // result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
     }
     else
     {
