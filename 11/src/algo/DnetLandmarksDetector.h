@@ -14,7 +14,7 @@ public:
     virtual std::vector<int> Detect(const cv::Mat& image, const Rect &face) const override;
 
 private:
-    bool mOpenVino = true;
+    bool mOpenVino = false;
     std::shared_ptr<OpenVinoInference> mModelInference;
     std::shared_ptr<TensorFlowInference> mTensorFlowInference;
 };
