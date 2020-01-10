@@ -16,6 +16,9 @@ include_directories (
 
 file(GLOB algo_src "../algo/*.cpp")
 
+# TensorFlow lib
+add_library( tensorflow SHARED IMPORTED PUBLIC )
+set_target_properties( tensorflow PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/libtensorflow.so )
 
 # Build the shared libraries
 add_library (${MODULE_NAME} SHARED ${algo_src} nullimplfrvt11.cpp)
@@ -24,5 +27,5 @@ target_link_libraries (${MODULE_NAME}
     /home/administrator/opencv-4.1.2/lib64/libopencv_core.so
     /home/administrator/opencv-4.1.2/lib64/libopencv_imgproc.so
 )
-
+target_link_libraries (${MODULE_NAME} tensorflow)
 target_link_libraries (${MODULE_NAME}  ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/libinference_engine.so)
