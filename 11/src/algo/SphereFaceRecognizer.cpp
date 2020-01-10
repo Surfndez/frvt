@@ -21,10 +21,30 @@ NormalizeImage(const cv::Mat& image)
 SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
     std::string sphereModelPath = configDir + "/fa_model"; // sphereface_drop-sphere_v0_108_dm100_se_arcface_listv12_obj3_sim_01-175000_features
-    mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(sphereModelPath));
+    if (mOpenVino)
+        mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(sphereModelPath));
+    else
+        mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(sphereModelPath, {"input"}, {"output_features"}));
 }
 
 SphereFaceRecognizer::~SphereFaceRecognizer() {}
+
+cv::Mat
+SphereFaceRecognizer::Extract(const cv::Mat& image) const
+{
+    if (mOpenVino)
+    {
+        auto output = mModelInference ->Infer(image);
+        const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
+        return cv::Mat(512, 1, CV_32F, result);
+    }
+    else
+    {
+        auto output = mTensorFlowInference->Infer(image);
+        float* output_features = static_cast<float*>(TF_TensorData(output[0].get()));
+        return cv::Mat(512, 1, CV_32F, output_features);
+    }
+}
 
 std::vector<float>
 SphereFaceRecognizer::Infer(const cv::Mat& constImage) const
@@ -32,15 +52,11 @@ SphereFaceRecognizer::Infer(const cv::Mat& constImage) const
     cv::Mat image = NormalizeImage(constImage);
 
     // infer on original image
-    auto output = mModelInference ->Infer(image);
-    const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
-    cv::Mat featuresMat_1(512, 1, CV_32F, result);
+    cv::Mat featuresMat_1 = Extract(image);
 
     // infer on flipped image
     cv::flip(image, image, 1);
-    auto output_2 = mModelInference ->Infer(image);
-    const auto result1 = output_2->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
-    cv::Mat featuresMat_2(512, 1, CV_32F, result1);
+    cv::Mat featuresMat_2 = Extract(image);
 
     // Average features
     cv::Mat featuresMat = (featuresMat_1 + featuresMat_2) / 2;
