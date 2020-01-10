@@ -2,6 +2,7 @@
 #define SSDFACEDETECTOR_H_
 
 #include "OpenVinoInference.h"
+#include "TensorFlowInference.h"
 #include "FaceDetector.h"
 
 namespace FRVT_11 {
@@ -16,7 +17,9 @@ public:
 
 private:
     std::shared_ptr<OpenVinoInference> mModelInference;
+    std::shared_ptr<TensorFlowInference> mTensorFlowInference;
     int mInputSize;
+    bool mOpenVino = true;
 };
 }
 
