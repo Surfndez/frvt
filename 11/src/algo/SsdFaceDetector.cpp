@@ -11,7 +11,8 @@ SsdFaceDetector::SsdFaceDetector(const std::string& configDir, const std::string
 {
     std::string modelPath = configDir + modelName;
     if (mOpenVino)
-        mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(modelPath));
+        // mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(modelPath));
+        return;
     else
         mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(
             modelPath,
@@ -30,23 +31,23 @@ SsdFaceDetector::Detect(const cv::Mat& constImage) const
 
     if (mOpenVino)
     {
-        cv::Mat image;
-        constImage.convertTo(image, CV_32FC3);
+        // cv::Mat image;
+        // constImage.convertTo(image, CV_32FC3);
 
-        cv::resize(image, image, cv::Size(mInputSize, mInputSize), 0, 0, cv::INTER_LINEAR);
+        // cv::resize(image, image, cv::Size(mInputSize, mInputSize), 0, 0, cv::INTER_LINEAR);
 
-        auto output = mModelInference->Infer(image);
+        // auto output = mModelInference->Infer(image);
 
-        float *detection = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type *>();
+        // float *detection = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type *>();
     
-        if (detection[2] > DETECTION_SCORE) {
-            Rect rect(  int(detection[3] * ratioW),
-                        int(detection[4] * ratioH),
-                        int(detection[5] * ratioW),
-                        int(detection[6] * ratioH),
-                        detection[2]);
-            return {rect};
-        }
+        // if (detection[2] > DETECTION_SCORE) {
+        //     Rect rect(  int(detection[3] * ratioW),
+        //                 int(detection[4] * ratioH),
+        //                 int(detection[5] * ratioW),
+        //                 int(detection[6] * ratioH),
+        //                 detection[2]);
+        //     return {rect};
+        // }
     }
     else
     {

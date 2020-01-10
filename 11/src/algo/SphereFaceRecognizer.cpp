@@ -22,7 +22,8 @@ SphereFaceRecognizer::SphereFaceRecognizer(const std::string &configDir)
 {
     std::string sphereModelPath = configDir + "/fa_model"; // sphereface_drop-sphere_v0_108_dm100_se_arcface_listv12_obj3_sim_01-175000_features
     if (mOpenVino)
-        mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(sphereModelPath));
+        // mModelInference = std::make_shared<OpenVinoInference>(OpenVinoInference(sphereModelPath));
+        return;
     else
         mTensorFlowInference = std::make_shared<TensorFlowInference>(TensorFlowInference(sphereModelPath, {"input"}, {"output_features"}));
 }
@@ -34,15 +35,15 @@ SphereFaceRecognizer::Extract(const cv::Mat& image) const
 {
     if (mOpenVino)
     {
-        auto output = mModelInference ->Infer(image);
-        const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
-        return cv::Mat(512, 1, CV_32F, result);
+        // auto output = mModelInference ->Infer(image);
+        // const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
+        // return cv::Mat(512, 1, CV_32F, result);
     }
     else
     {
         auto output = mTensorFlowInference->Infer(image);
         float* output_features = static_cast<float*>(TF_TensorData(output[0].get()));
-        return cv::Mat(512, 1, CV_32F, output_features);
+        return cv::Mat(512, 1, CV_32F, output_features).clone();
     }
 }
 
@@ -55,11 +56,11 @@ SphereFaceRecognizer::Infer(const cv::Mat& constImage) const
     cv::Mat featuresMat_1 = Extract(image);
 
     // infer on flipped image
-    cv::flip(image, image, 1);
-    cv::Mat featuresMat_2 = Extract(image);
+    // cv::flip(image, image, 1);
+    // cv::Mat featuresMat_2 = Extract(image);
 
     // Average features
-    cv::Mat featuresMat = (featuresMat_1 + featuresMat_2) / 2;
+    cv::Mat featuresMat = featuresMat_1; // (featuresMat_1 + featuresMat_2) / 2;
 
     // convert to vector (function should be changed to return cv::Mat)
     std::vector<float> features(512);

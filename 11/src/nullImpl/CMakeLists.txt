@@ -28,4 +28,4 @@ target_link_libraries (${MODULE_NAME}
     /home/administrator/opencv-4.1.2/lib64/libopencv_imgproc.so
 )
 target_link_libraries (${MODULE_NAME} tensorflow)
-target_link_libraries (${MODULE_NAME}  ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/libinference_engine.so)
+# target_link_libraries (${MODULE_NAME}  ${CMAKE_CURRENT_SOURCE_DIR}/../../lib/libinference_engine.so)
