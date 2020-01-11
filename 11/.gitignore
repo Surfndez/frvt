@@ -7,3 +7,4 @@ src/fatest/build/
 src/nullImpl/build/
 intel64/
 validation/
+flow_time.txt
