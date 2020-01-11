@@ -13,7 +13,7 @@ int INPUT_SIZE = 64;
 
 struct ImageCrop
 {
-    ImageCrop(cv::Mat& image, const Rect& rect)
+    ImageCrop(const cv::Mat& image, const Rect& rect)
     {
         // Rect to square
 
@@ -63,12 +63,10 @@ struct ImageCrop
         cv::Mat cropped_img = cv::Mat::zeros(face_height, face_width, CV_8UC3);
         cv::Rect roiInNew(dest_xbegin, dest_ybegin, dest_xend - dest_xbegin, dest_yend - dest_ybegin);
         cropFromOrig.copyTo(cropped_img(roiInNew));
-        image = cropped_img;
 
-        auto interpolation = image.cols * image.rows < INPUT_SIZE^2 ? cv::INTER_LINEAR : cv::INTER_AREA;
-        cv::resize(image, image, cv::Size(INPUT_SIZE, INPUT_SIZE), 0, 0, interpolation);
-
-        croppedImage = image;
+        auto interpolation = cropped_img.cols * cropped_img.rows < INPUT_SIZE^2 ? cv::INTER_LINEAR : cv::INTER_AREA;
+        cv::resize(cropped_img, cropped_img, cv::Size(INPUT_SIZE, INPUT_SIZE), 0, 0, interpolation);
+        croppedImage = cropped_img;
     }
 
     int h;
@@ -92,7 +90,7 @@ struct ImageCrop
 };
 
 ImageCrop
-CropImage(cv::Mat& image, const Rect& rect)
+CropImage(const cv::Mat& image, const Rect& rect)
 {
     return ImageCrop(image, rect);
 }
@@ -151,24 +149,15 @@ DnetLandmarksDetector::DnetLandmarksDetector(const std::string &configDir)
 DnetLandmarksDetector::~DnetLandmarksDetector() {}
 
 std::vector<int>
-DnetLandmarksDetector::Detect(const ImageData& imageData, const Rect &face) const
-{
-    cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
-    auto landmarks = DoDetect(image, face);
-    return landmarks;
-}
-
-std::vector<int>
-DnetLandmarksDetector::DoDetect(cv::Mat& image, const Rect &face) const
+DnetLandmarksDetector::Detect(const cv::Mat& image, const Rect &face) const
 {
     // Prepare image
-
     ImageCrop imageCrop = CropImage(image, face);
 
-    image = NormalizeImage(imageCrop.croppedImage);
-
+    cv::Mat inferImage = NormalizeImage(imageCrop.croppedImage);
+    
     // Perform inference
-    auto output = mModelInference->Infer(image);
+    auto output = mModelInference->Infer(inferImage);
     const auto result = output->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type*>();
 
     // Process output

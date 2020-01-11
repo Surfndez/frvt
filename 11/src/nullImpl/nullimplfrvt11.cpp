@@ -115,18 +115,19 @@ NullImplFRVT11::safeCreateTemplate(
 {
     std::vector<std::vector<float>> templates;
 
-    for(const Image &image: faces) {
-        int channels = int(image.depth / 8);
-        ImageData imageData(image.data, image.width, image.height, channels);
+    for(const Image &face: faces) {
+        int channels = int(face.depth / 8);
+        ImageData imageData(face.data, face.width, face.height, channels);
+        cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
 
         try {
-            std::vector<Rect> rects = mFaceDetector->Detect(imageData);
+            std::vector<Rect> rects = mFaceDetector->Detect(image);
             if (rects.size() == 0) continue;
             const Rect& rect = rects[0]; // should be only one face in image
 
-            std::vector<int> landmarks = mLandmarksDetector->Detect(imageData, rect);
+            std::vector<int> landmarks = mLandmarksDetector->Detect(image, rect);
             if (landmarks.size() == 0) continue;
-            
+
             auto normalizedImage = mImageNormalizer->normalize(imageData, landmarks);
 
             std::vector<float> features = mFaceRecognizer->Infer(normalizedImage);

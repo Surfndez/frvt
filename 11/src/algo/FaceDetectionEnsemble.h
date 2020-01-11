@@ -10,9 +10,7 @@ public:
     FaceDetectionEnsemble(const std::string &configDir);
     ~FaceDetectionEnsemble() override;
 
-    virtual std::vector<Rect> Detect(const ImageData &image) const override;
-
-    virtual std::vector<Rect> Detect(const cv::Mat& constImage) const override { std::logic_error{"Function not yet implemented."}; }
+    virtual std::vector<Rect> Detect(const cv::Mat& constImage) const override;
 
 private:
     std::vector<std::shared_ptr<FaceDetector>> mDetectors;

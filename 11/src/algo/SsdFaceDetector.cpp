@@ -15,13 +15,6 @@ SsdFaceDetector::SsdFaceDetector(const std::string& configDir, const std::string
 SsdFaceDetector::~SsdFaceDetector() {}
 
 std::vector<Rect>
-SsdFaceDetector::Detect(const ImageData &imageData) const
-{
-    cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
-    return this->Detect(image);
-}
-
-std::vector<Rect>
 SsdFaceDetector::Detect(const cv::Mat& constImage) const
 {
     cv::Mat image;

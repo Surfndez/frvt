@@ -14,10 +14,10 @@ FaceDetectionEnsemble::FaceDetectionEnsemble(const std::string &configDir)
 FaceDetectionEnsemble::~FaceDetectionEnsemble() {}
 
 std::vector<Rect>
-FaceDetectionEnsemble::Detect(const ImageData &imageData) const
+FaceDetectionEnsemble::Detect(const cv::Mat& constImage) const
 {
     for (auto& d : mDetectors) {
-        std::vector<Rect> rects = d->Detect(imageData);
+        std::vector<Rect> rects = d->Detect(constImage);
         if (rects.size() > 0) {
             return {rects[0]};
         }
