@@ -117,8 +117,7 @@ NullImplFRVT11::safeCreateTemplate(
 
     for(const Image &face: faces) {
         int channels = int(face.depth / 8);
-        ImageData imageData(face.data, face.width, face.height, channels);
-        cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());
+        cv::Mat image(face.height, face.width, CV_8UC3, face.data.get());
 
         try {
             std::vector<Rect> rects = mFaceDetector->Detect(image);
@@ -128,7 +127,7 @@ NullImplFRVT11::safeCreateTemplate(
             std::vector<int> landmarks = mLandmarksDetector->Detect(image, rect);
             if (landmarks.size() == 0) continue;
 
-            auto normalizedImage = mImageNormalizer->normalize(imageData, landmarks);
+            auto normalizedImage = mImageNormalizer->normalize(image, landmarks);
 
             std::vector<float> features = mFaceRecognizer->Infer(normalizedImage);
 

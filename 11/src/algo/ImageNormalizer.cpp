@@ -86,7 +86,7 @@ CropImage(const cv::Mat& image, const std::vector<int>& landmarks)
 }
 
 cv::Mat
-NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
+ImageNormalizer::normalize(const cv::Mat& image, const std::vector<int>& landmarks) const
 {
     // crop
     cv::Mat cropped = CropImage(image, landmarks);
@@ -95,12 +95,4 @@ NormalizeImage(const cv::Mat& image, const std::vector<int>& landmarks)
     cv::resize(cropped, cropped, cv::Size(128, 128), 0, 0, cv::INTER_AREA);
 
     return cropped;
-}
-
-cv::Mat
-ImageNormalizer::normalize(const ImageData& imageData, const std::vector<int>& landmarks) const
-{
-    cv::Mat image(imageData.height, imageData.width, CV_8UC3, imageData.data.get());    
-    image = NormalizeImage(image, landmarks);
-    return image;
 }
