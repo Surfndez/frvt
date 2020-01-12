@@ -63,6 +63,8 @@ private:
     std::shared_ptr<ImageNormalizer> mImageNormalizer;
     std::shared_ptr<FaceClassifier> mFaceClassifier;
     std::shared_ptr<FaceRecognizer> mFaceRecognizer;
+
+    // std::vector<double> mTimes;
 };
 }
 

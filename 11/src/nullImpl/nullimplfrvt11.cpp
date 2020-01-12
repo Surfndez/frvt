@@ -21,6 +21,8 @@
 #include "../algo/DnetLandmarksDetector.h"
 #include "../algo/SphereFaceRecognizer.h"
 
+#include "../algo/TimeMeasurement.h"
+
 using namespace std;
 using namespace FRVT;
 using namespace FRVT_11;
@@ -78,7 +80,22 @@ NullImplFRVT11::createTemplate(
         std::vector<EyePair> &eyeCoordinates)
 {
     try {
-        return safeCreateTemplate(faces, role, templ, eyeCoordinates);
+        // auto t = TimeMeasurement();
+        
+        auto r = safeCreateTemplate(faces, role, templ, eyeCoordinates);
+        
+        // double count = t.Test(false);
+        // std::cout << count << std::endl;
+        // if (count < 2)
+        //     mTimes.push_back(count);
+        // if (mTimes.size() > 0 && mTimes.size() % 25 == 0)
+        // {
+        //     double timesSum = 0;
+        //     for (auto& n : mTimes) timesSum += n;
+        //     std::cout << "Average time after " << mTimes.size() << " images: " << timesSum/mTimes.size() << std::endl;
+        // }
+
+        return r;
     }
     catch (const std::exception& e) {
         //std::cout << e.what() << std::endl;
@@ -89,7 +106,7 @@ NullImplFRVT11::createTemplate(
 }
 
 void
-DebugPrint(const Rect& rect, const std::vector<int>& landmarks, std::vector<float> features, float ratio)
+DebugPrint(const Rect& rect, const std::vector<int>& landmarks, std::vector<float> features, float ratio = 1.)
 {
     std::ofstream dataFile("flow_data.txt", std::ios::out | std::ios::app);
 
@@ -109,19 +126,6 @@ DebugPrint(const Rect& rect, const std::vector<int>& landmarks, std::vector<floa
     dataFile << "Norm: " << norm << std::endl;
 }
 
-float
-ResizeImage(cv::Mat& image)
-{
-    float maxImageSize = 512.;
-    if (image.cols > maxImageSize && image.rows > maxImageSize)
-    {
-        float ratio = std::max(maxImageSize/image.cols, maxImageSize/image.rows);
-        cv::resize(image, image, cv::Size(), ratio, ratio, cv::INTER_LINEAR);
-        return ratio;
-    }
-    return 1.;
-}
-
 ReturnStatus
 NullImplFRVT11::safeCreateTemplate(
         const Multiface &faces,
@@ -134,7 +138,6 @@ NullImplFRVT11::safeCreateTemplate(
     for(const Image &face: faces) {
         int channels = int(face.depth / 8);
         cv::Mat image(face.height, face.width, CV_8UC3, face.data.get());
-        float ratio = ResizeImage(image);
 
         try {
             std::vector<Rect> rects = mFaceDetector->Detect(image);
@@ -152,10 +155,10 @@ NullImplFRVT11::safeCreateTemplate(
 
             if (classifyResult == FaceClassificationResult::Pass)
             {
-                eyeCoordinates.push_back(EyePair(true, true, landmarks[0]/ratio, landmarks[1]/ratio, landmarks[2]/ratio, landmarks[3]/ratio));
+                eyeCoordinates.push_back(EyePair(true, true, landmarks[0], landmarks[1], landmarks[2], landmarks[3]));
                 templates.push_back(std::vector<float>(features.begin(), features.begin()+512));
 
-                // DebugPrint(rect, landmarks, features, ratio);
+                // DebugPrint(rect, landmarks, features);
             }
         }
         catch (const std::exception& e) {
