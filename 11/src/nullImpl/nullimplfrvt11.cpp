@@ -14,6 +14,8 @@
 #include <stdexcept>
 #include <fstream>
 
+#include <opencv2/imgproc.hpp>
+
 #include "nullimplfrvt11.h"
 #include "../algo/FaceDetectionEnsemble.h"
 #include "../algo/DnetLandmarksDetector.h"
@@ -106,6 +108,19 @@ DebugPrint(const Rect& rect, const std::vector<int>& landmarks, std::vector<floa
     dataFile << "Norm: " << norm << std::endl;
 }
 
+float
+ResizeImage(cv::Mat& image)
+{
+    float maxImageSize = 512.;
+    if (image.cols > maxImageSize && image.rows > maxImageSize)
+    {
+        float ratio = std::max(maxImageSize/image.cols, maxImageSize/image.rows);
+        cv::resize(image, image, cv::Size(), ratio, ratio, cv::INTER_LINEAR);
+        return ratio;
+    }
+    return 1.;
+}
+
 ReturnStatus
 NullImplFRVT11::safeCreateTemplate(
         const Multiface &faces,
@@ -118,6 +133,7 @@ NullImplFRVT11::safeCreateTemplate(
     for(const Image &face: faces) {
         int channels = int(face.depth / 8);
         cv::Mat image(face.height, face.width, CV_8UC3, face.data.get());
+        float ratio = ResizeImage(image);
 
         try {
             std::vector<Rect> rects = mFaceDetector->Detect(image);
@@ -135,7 +151,7 @@ NullImplFRVT11::safeCreateTemplate(
 
             if (classifyResult == FaceClassificationResult::Pass)
             {
-                eyeCoordinates.push_back(EyePair(true, true, landmarks[0], landmarks[1], landmarks[2], landmarks[3]));
+                eyeCoordinates.push_back(EyePair(true, true, landmarks[0]/ratio, landmarks[1]/ratio, landmarks[2]/ratio, landmarks[3]/ratio));
                 templates.push_back(std::vector<float>(features.begin(), features.begin()+512));
 
                 // DebugPrint(rect, landmarks, features);
