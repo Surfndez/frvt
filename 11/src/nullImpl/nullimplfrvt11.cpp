@@ -89,14 +89,14 @@ NullImplFRVT11::createTemplate(
 }
 
 void
-DebugPrint(const Rect& rect, const std::vector<int>& landmarks, std::vector<float> features)
+DebugPrint(const Rect& rect, const std::vector<int>& landmarks, std::vector<float> features, float ratio)
 {
     std::ofstream dataFile("flow_data.txt", std::ios::out | std::ios::app);
 
-    dataFile << "Rectangle: " << rect.x1 << " " << rect.y1 << " " << rect.x2 << " " << rect.y2 << std::endl;
+    dataFile << "Rectangle: " << int(rect.x1/ratio) << " " << int(rect.y1/ratio) << " " << int(rect.x2/ratio) << " " << int(rect.y2/ratio) << std::endl;
 
     dataFile << "Landmarks:";
-    for (int i = 0; i < 10; i++) dataFile << " " << landmarks[i];
+    for (int i = 0; i < 10; i++) dataFile << " " << int(landmarks[i]/ratio);
     dataFile << std::endl;
 
     cv::Mat f1(512, 1, CV_32F, features.data());
@@ -155,7 +155,7 @@ NullImplFRVT11::safeCreateTemplate(
                 eyeCoordinates.push_back(EyePair(true, true, landmarks[0]/ratio, landmarks[1]/ratio, landmarks[2]/ratio, landmarks[3]/ratio));
                 templates.push_back(std::vector<float>(features.begin(), features.begin()+512));
 
-                // DebugPrint(rect, landmarks, features);
+                // DebugPrint(rect, landmarks, features, ratio);
             }
         }
         catch (const std::exception& e) {
