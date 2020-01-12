@@ -53,7 +53,10 @@ SphereFaceRecognizer::Infer(const cv::Mat& constImage) const
     cv::Mat image = NormalizeImage(constImage);
 
     // infer on original image
-    cv::Mat featuresMat_1 = Extract(image);
+    // cv::Mat featuresMat_1 = Extract(image);
+    auto output = mTensorFlowInference->Infer(image);
+    float* output_features = static_cast<float*>(TF_TensorData(output[0].get()));
+    cv::Mat featuresMat_1(512, 1, CV_32F, output_features);
 
     // infer on flipped image
     // cv::flip(image, image, 1);
