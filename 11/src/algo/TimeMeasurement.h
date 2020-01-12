@@ -8,7 +8,7 @@ namespace FRVT_11 {
     class TimeMeasurement {
 public:
     TimeMeasurement();
-    void Test();
+    double Test(bool print = true);
 
 private:
     std::chrono::time_point<std::chrono::high_resolution_clock> mStart;

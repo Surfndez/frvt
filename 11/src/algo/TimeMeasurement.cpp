@@ -9,12 +9,15 @@ TimeMeasurement::TimeMeasurement() : mStart(std::chrono::high_resolution_clock::
 {
 }
 
-void
-TimeMeasurement::Test()
+double
+TimeMeasurement::Test(bool print /* = true */)
 {
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - mStart;
-    std::cout << "Elapsed time: " << elapsed.count() << " s" << std::endl;
+    double count =  elapsed.count();
+    if (print)
+        std::cout << "Elapsed time: " << count << " s" << std::endl;
+    return count;
 }
 
 std::string
