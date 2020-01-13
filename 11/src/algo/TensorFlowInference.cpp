@@ -104,6 +104,7 @@ TensorFlowInference::Infer(const cv::Mat& image)
             if (p != nullptr) TF_DeleteTensor(p);
         });
     }
+    TF_DeleteTensor(input_tensor);
 
     return return_values;
 }
