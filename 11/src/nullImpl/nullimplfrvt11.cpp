@@ -80,15 +80,15 @@ NullImplFRVT11::createTemplate(
         std::vector<EyePair> &eyeCoordinates)
 {
     try {
+        // static std::vector<double> mTimes;
         // auto t = TimeMeasurement();
         
         auto r = safeCreateTemplate(faces, role, templ, eyeCoordinates);
         
         // double count = t.Test(false);
-        // std::cout << count << std::endl;
         // if (count < 2)
         //     mTimes.push_back(count);
-        // if (mTimes.size() > 0 && mTimes.size() % 25 == 0)
+        // if (mTimes.size() > 0 && mTimes.size() % 100 == 0)
         // {
         //     double timesSum = 0;
         //     for (auto& n : mTimes) timesSum += n;
